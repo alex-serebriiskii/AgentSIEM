@@ -1,0 +1,12 @@
+bin/
+obj/
+.git/
+.github/
+.idea/
+.claude/
+.vs/
+reference_materials/
+tests/
+*.md
+*.docx
+*.svg

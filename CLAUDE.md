@@ -4,7 +4,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AgentSIEM (VibeSIEM) is a SIEM system for monitoring LLM agent activity. It ingests agent events from Kafka, evaluates them against a rules engine, and generates alerts with notifications. The project is in early development — the `reference_materials/` directory contains the design blueprints (code samples, SQL schema, architecture diagrams) but the actual solution has not yet been scaffolded.
+AgentSIEM (VibeSIEM) is a SIEM system for monitoring LLM agent activity. It ingests agent events from Kafka, evaluates them against a rules engine, and generates alerts with notifications. All core components are implemented and tested (F# rules engine, Kafka consumer pipeline, alert pipeline, notification channels, REST API, EF Core data layer with TimescaleDB migrations). The `reference_materials/` directory contains the original design blueprints (code samples, SQL schema, architecture diagrams) used during scaffolding.
+
+## Build & Test Commands
+
+```bash
+# Build the entire solution
+dotnet build
+
+# Run unit tests (no Docker needed)
+dotnet run --project tests/Siem.Rules.Core.Tests
+dotnet run --project tests/Siem.Api.Tests
+
+# Run integration tests (requires Docker for Testcontainers)
+dotnet run --project tests/Siem.Integration.Tests
+
+# Run everything with Docker Compose
+docker compose up
+```
+
+Note: This project uses **TUnit** (not xUnit/NUnit). Tests are run with `dotnet run`, not `dotnet test`. TUnit projects have `OutputType: Exe`.
 
 ## Architecture
 
