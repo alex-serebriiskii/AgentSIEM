@@ -1,6 +1,17 @@
 # Phase 1 Checklist — AgentSIEM Project State
 
-> **Last verified**: 2026-03-25 | **Build**: Clean (0 errors, 0 warnings) | **Tests**: 162/162 passing (39 rules core + 85 API/controller + 38 integration)
+> **Status: COMPLETE** | All exit criteria met as of 2026-03-25
+>
+> **Build**: Clean (0 errors, 0 warnings) | **Tests**: 162/162 passing (39 rules core + 85 API/controller + 38 integration)
+
+## Exit Criteria
+
+| Criterion | Status | Evidence |
+|-----------|--------|----------|
+| Test event published to Kafka appears in `agent_events` hypertable within 5 seconds | Pass | `EndToEnd_KafkaToTimescaleDb_CompletesWithin5Seconds` (automated) |
+| Batch writes achieve 10k+ events/second | Pass | `BatchWriteThroughput_Exceeds10kEventsPerSecond` (automated) |
+| Dead letter routing works for malformed events | Pass | `DeadLetterProducerTests` — 3 automated tests covering payload, headers, original header preservation |
+| Consumer survives Kafka rebalance without data loss | Pass | Manual test per `RebalanceTest.md` — 2,000 events, zero loss, automatic recovery after rebalance |
 
 ## Scaffolded Components
 
@@ -18,7 +29,7 @@
 | REST Controllers | Done | `src/Siem.Api/Controllers/` (5 files) | Rules, Alerts, Engine, Lists, Sessions |
 | Request/Response Models | Done | `src/Siem.Api/Models/` (8 files) | Create/Update/Resolve requests + response DTOs |
 | SignalR Hub | Done | `src/Siem.Api/Hubs/AlertHub.cs` | Endpoint: `/hubs/alerts` |
-| DI + Middleware | Done | `src/Siem.Api/Program.cs` | Full DI registration, Swagger, health checks |
+| DI + Middleware | Done | `src/Siem.Api/Program.cs` | Full DI registration, Swagger, health checks, auto-migration on startup |
 | Docker / docker-compose | Done | `Dockerfile`, `docker-compose.yml`, `.dockerignore` | Multi-stage build, 4 services: TimescaleDB, Redis, Kafka (KRaft), siem-api |
 | Unit Tests — Rules Core | Done | `tests/Siem.Rules.Core.Tests/` (6 files, 39 tests) | Compiler, Engine, Evaluator, FieldResolver, Serialization |
 | Unit Tests — API | Done | `tests/Siem.Api.Tests/` (6 files, 85 tests) | AlertPipeline, AlertDeduplicator, AgentEventNormalizer, NotificationRouter, FSharpInteropExtensions, CompiledRulesCache, all 5 controllers |
@@ -31,10 +42,12 @@ Infrastructure-as-Code has been moved to `WhenAppropriate.md`.
 
 ## Prerequisites for Running
 
-Docker must be installed to use `docker compose up`. The `dotnet-ef` tool is needed for migrations:
+Docker must be installed to use `docker compose up`. The `dotnet-ef` tool is needed for standalone migrations:
 ```bash
 dotnet tool install --global dotnet-ef
 ```
+
+Note: `docker compose up` runs migrations automatically on startup.
 
 ## Tech Stack
 

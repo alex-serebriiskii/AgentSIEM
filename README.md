@@ -89,6 +89,10 @@ dotnet run --project tests/Siem.Integration.Tests
 | Siem.Api.Tests | 85 | Alert pipeline, normalizer, notification router, controllers, cache |
 | Siem.Integration.Tests | 38 | EF Core CRUD, migrations, batch writer (incl. 10k/s throughput benchmark), Redis state, list cache, Kafka pipeline (incl. end-to-end latency), dead-letter routing |
 
+### Manual Tests
+
+The Kafka consumer rebalance survival test requires a running `docker compose` environment. See [RebalanceTest.md](RebalanceTest.md) for the step-by-step procedure.
+
 ## CI/CD
 
 GitHub Actions runs on push/PR to `main`:

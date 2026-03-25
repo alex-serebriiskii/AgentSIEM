@@ -65,6 +65,14 @@ builder.Services.AddHttpClient();
 // ---------------------------------------------------------------------------
 var app = builder.Build();
 
+// Run EF Core migrations on startup (safe for development; for production
+// consider running migrations as a separate step before deployment).
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<SiemDbContext>();
+    await db.Database.MigrateAsync();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
