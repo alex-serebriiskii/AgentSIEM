@@ -19,6 +19,7 @@
     <PackageReference Include="StackExchange.Redis" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" IncludeAssets="runtime;build;native;contentfiles;analyzers" />
   </ItemGroup>
 
 </Project>

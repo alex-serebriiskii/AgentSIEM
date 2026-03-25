@@ -31,7 +31,7 @@ public record InvalidationSignal(
 /// rules atomically, validates before swapping, and publishes the new engine
 /// via atomic volatile write.
 /// </summary>
-public class RecompilationCoordinator : BackgroundService
+public class RecompilationCoordinator : BackgroundService, IRecompilationCoordinator
 {
     private readonly Channel<InvalidationSignal> _channel;
     private readonly ListCacheService _listCache;

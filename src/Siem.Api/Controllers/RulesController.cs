@@ -15,9 +15,9 @@ namespace Siem.Api.Controllers;
 public class RulesController : ControllerBase
 {
     private readonly SiemDbContext _db;
-    private readonly RecompilationCoordinator _coordinator;
+    private readonly IRecompilationCoordinator _coordinator;
 
-    public RulesController(SiemDbContext db, RecompilationCoordinator coordinator)
+    public RulesController(SiemDbContext db, IRecompilationCoordinator coordinator)
     {
         _db = db;
         _coordinator = coordinator;

@@ -12,9 +12,9 @@ namespace Siem.Api.Controllers;
 public class ListsController : ControllerBase
 {
     private readonly SiemDbContext _db;
-    private readonly RecompilationCoordinator _coordinator;
+    private readonly IRecompilationCoordinator _coordinator;
 
-    public ListsController(SiemDbContext db, RecompilationCoordinator coordinator)
+    public ListsController(SiemDbContext db, IRecompilationCoordinator coordinator)
     {
         _db = db;
         _coordinator = coordinator;

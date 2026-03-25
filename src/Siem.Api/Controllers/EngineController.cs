@@ -8,11 +8,11 @@ namespace Siem.Api.Controllers;
 public class EngineController : ControllerBase
 {
     private readonly CompiledRulesCache _rulesCache;
-    private readonly RecompilationCoordinator _coordinator;
+    private readonly IRecompilationCoordinator _coordinator;
 
     public EngineController(
         CompiledRulesCache rulesCache,
-        RecompilationCoordinator coordinator)
+        IRecompilationCoordinator coordinator)
     {
         _rulesCache = rulesCache;
         _coordinator = coordinator;

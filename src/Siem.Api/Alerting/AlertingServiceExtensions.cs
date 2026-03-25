@@ -30,7 +30,11 @@ public static class AlertingServiceExtensions
         services.AddSingleton<IAlertPipeline, AlertPipeline>();
 
         // Notification retry infrastructure
-        services.AddHostedService<NotificationRetryWorker>();
+        // Register as singleton first so NotificationRouter can resolve it,
+        // then register the same instance as a hosted service.
+        services.AddSingleton<NotificationRetryWorker>();
+        services.AddHostedService<NotificationRetryWorker>(sp =>
+            sp.GetRequiredService<NotificationRetryWorker>());
 
         return services;
     }

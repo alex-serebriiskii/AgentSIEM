@@ -35,6 +35,8 @@ builder.Services.AddSingleton<Evaluator.IStateProvider>(sp =>
     sp.GetRequiredService<RedisStateProvider>());
 builder.Services.AddSingleton<CompiledRulesCache>();
 builder.Services.AddSingleton<RecompilationCoordinator>();
+builder.Services.AddSingleton<IRecompilationCoordinator>(sp =>
+    sp.GetRequiredService<RecompilationCoordinator>());
 builder.Services.AddHostedService(sp =>
     sp.GetRequiredService<RecompilationCoordinator>());
 
