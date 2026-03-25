@@ -416,3 +416,28 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Claude Code
+.claude/
+
+# Reference materials (design blueprints, not production code)
+reference_materials/
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secrets / local config
+appsettings.*.local.json
+*.local.json
+
+# Docker local state
+docker-compose.override.yml
+
+# TUnit test results
+**/TestResults/

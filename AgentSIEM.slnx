@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Siem.Api/Siem.Api.csproj" />
+    <Project Path="src/Siem.Rules.Core/Siem.Rules.Core.fsproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Siem.Api.Tests/Siem.Api.Tests.csproj" />
+    <Project Path="tests/Siem.Rules.Core.Tests/Siem.Rules.Core.Tests.csproj" />
+  </Folder>
+</Solution>
