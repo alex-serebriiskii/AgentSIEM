@@ -251,4 +251,51 @@ public class RulesControllerTests : IDisposable
         var result = await _controller.ActivateRule(Guid.NewGuid(), CancellationToken.None);
         result.Should().BeOfType<NotFoundResult>();
     }
+
+    // --- Phase 2: Malformed JSON rejection with descriptive errors ---
+
+    [Test]
+    public async Task CreateRule_MissingConditionFields_ReturnsBadRequestWithDetail()
+    {
+        var request = ValidCreateRequest();
+        // Missing "operator" and "value" fields
+        request.ConditionJson = TestEntityBuilders.ParseJson("""{"type":"field","field":"eventType"}""");
+
+        var result = await _controller.CreateRule(request, CancellationToken.None);
+
+        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var body = JsonSerializer.Serialize(badRequest.Value);
+        body.Should().Contain("error");
+        body.Should().Contain("detail");
+    }
+
+    [Test]
+    public async Task CreateRule_InvalidOperator_ReturnsBadRequestWithDetail()
+    {
+        var request = ValidCreateRequest();
+        request.ConditionJson = TestEntityBuilders.ParseJson(
+            """{"type":"field","field":"eventType","operator":"InvalidOp","value":"x"}""");
+
+        var result = await _controller.CreateRule(request, CancellationToken.None);
+
+        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var body = JsonSerializer.Serialize(badRequest.Value);
+        body.Should().Contain("error");
+        body.Should().Contain("detail");
+    }
+
+    [Test]
+    public async Task CreateRule_MissingConditionsArray_ReturnsBadRequestWithDetail()
+    {
+        var request = ValidCreateRequest();
+        // "and" type requires a "conditions" array
+        request.ConditionJson = TestEntityBuilders.ParseJson("""{"type":"and"}""");
+
+        var result = await _controller.CreateRule(request, CancellationToken.None);
+
+        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var body = JsonSerializer.Serialize(badRequest.Value);
+        body.Should().Contain("error");
+        body.Should().Contain("detail");
+    }
 }

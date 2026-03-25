@@ -177,4 +177,205 @@ public class CompilerTests
 
         result.Should().BeTrue();
     }
+
+    // --- ComparisonOp coverage ---
+
+    [Test]
+    public async Task Compile_FieldCondition_Neq_ReturnsTrueWhenDifferent()
+    {
+        var condition = Condition.NewField("eventType", ComparisonOp.Neq, JsonString("llm_call"));
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(eventType: "tool_invocation");
+
+        predicate.Invoke(evt).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Compile_FieldCondition_Contains_ReturnsTrueWhenSubstringFound()
+    {
+        var condition = Condition.NewField("agentName", ComparisonOp.Contains, JsonString("Agent"));
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(agentName: "TestAgent");
+
+        predicate.Invoke(evt).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Compile_FieldCondition_StartsWith_ReturnsTrueWhenPrefixMatches()
+    {
+        var condition = Condition.NewField("agentName", ComparisonOp.StartsWith, JsonString("Test"));
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(agentName: "TestAgent");
+
+        predicate.Invoke(evt).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Compile_FieldCondition_EndsWith_ReturnsTrueWhenSuffixMatches()
+    {
+        var condition = Condition.NewField("agentName", ComparisonOp.EndsWith, JsonString("Agent"));
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(agentName: "TestAgent");
+
+        predicate.Invoke(evt).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Compile_FieldCondition_Regex_ReturnsTrueWhenPatternMatches()
+    {
+        var condition = Condition.NewField("agentName", ComparisonOp.Regex, JsonValue("\"^Test\\\\w+$\""));
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(agentName: "TestAgent");
+
+        predicate.Invoke(evt).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Compile_FieldCondition_Gt_ReturnsTrueWhenAbove()
+    {
+        var condition = Condition.NewField("latencyMs", ComparisonOp.Gt, JsonNumber(100.0));
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(latencyMs: 150.0);
+
+        predicate.Invoke(evt).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Compile_FieldCondition_Lt_ReturnsTrueWhenBelow()
+    {
+        var condition = Condition.NewField("latencyMs", ComparisonOp.Lt, JsonNumber(100.0));
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(latencyMs: 50.0);
+
+        predicate.Invoke(evt).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Compile_FieldCondition_Gte_ReturnsTrueWhenEqual()
+    {
+        var condition = Condition.NewField("latencyMs", ComparisonOp.Gte, JsonNumber(100.0));
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(latencyMs: 100.0);
+
+        predicate.Invoke(evt).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Compile_FieldCondition_Lte_ReturnsTrueWhenEqual()
+    {
+        var condition = Condition.NewField("latencyMs", ComparisonOp.Lte, JsonNumber(100.0));
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(latencyMs: 100.0);
+
+        predicate.Invoke(evt).Should().BeTrue();
+    }
+
+    // --- None field (field not present on event) ---
+
+    [Test]
+    public async Task Compile_FieldCondition_NoneField_ReturnsFalse()
+    {
+        var condition = Condition.NewField("toolName", ComparisonOp.Eq, JsonString("search"));
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(toolName: null);
+
+        predicate.Invoke(evt).Should().BeFalse();
+    }
+
+    [Test]
+    public async Task Compile_Threshold_NoneField_ReturnsFalse()
+    {
+        var condition = Condition.NewThreshold("latencyMs", 100.0, true);
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(latencyMs: null);
+
+        predicate.Invoke(evt).Should().BeFalse();
+    }
+
+    [Test]
+    public async Task Compile_InList_NoneField_ReturnsNegatedValue()
+    {
+        var listId = Guid.NewGuid();
+        var condition = Condition.NewInList("toolName", listId, true);
+        var resolver = ListResolverFor(listId, "search");
+        var predicate = Compiler.compile(resolver, condition);
+        var evt = CreateEvent(toolName: null);
+
+        // When field is None and negated=true, returns true
+        predicate.Invoke(evt).Should().BeTrue();
+    }
+
+    // --- Exists ---
+
+    [Test]
+    public async Task Compile_Exists_FieldPresent_ReturnsTrue()
+    {
+        var condition = Condition.NewExists("toolName");
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(toolName: "search");
+
+        predicate.Invoke(evt).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Compile_Exists_FieldAbsent_ReturnsFalse()
+    {
+        var condition = Condition.NewExists("toolName");
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(toolName: null);
+
+        predicate.Invoke(evt).Should().BeFalse();
+    }
+
+    // --- AnyOf ---
+
+    [Test]
+    public async Task Compile_AnyOf_MatchingValue_ReturnsTrue()
+    {
+        var values = ListModule.OfSeq(new[] { JsonString("tool_invocation"), JsonString("llm_call") });
+        var condition = Condition.NewAnyOf("eventType", values);
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(eventType: "tool_invocation");
+
+        predicate.Invoke(evt).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Compile_AnyOf_NoMatchingValue_ReturnsFalse()
+    {
+        var values = ListModule.OfSeq(new[] { JsonString("llm_call"), JsonString("agent_start") });
+        var condition = Condition.NewAnyOf("eventType", values);
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(eventType: "tool_invocation");
+
+        predicate.Invoke(evt).Should().BeFalse();
+    }
+
+    [Test]
+    public async Task Compile_AnyOf_NoneField_ReturnsFalse()
+    {
+        var values = ListModule.OfSeq(new[] { JsonString("search") });
+        var condition = Condition.NewAnyOf("toolName", values);
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(toolName: null);
+
+        predicate.Invoke(evt).Should().BeFalse();
+    }
+
+    // --- Or no match ---
+
+    [Test]
+    public async Task Compile_OrCondition_NoneMatch_ReturnsFalse()
+    {
+        var conditions = ListModule.OfSeq(new[]
+        {
+            Condition.NewField("eventType", ComparisonOp.Eq, JsonString("llm_call")),
+            Condition.NewField("eventType", ComparisonOp.Eq, JsonString("agent_start"))
+        });
+        var condition = Condition.NewOr(conditions);
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(eventType: "tool_invocation");
+
+        predicate.Invoke(evt).Should().BeFalse();
+    }
 }

@@ -61,6 +61,30 @@ public static class TestEventFactory
             properties: MapModule.Empty<string, JsonElement>());
     }
 
+    public static AgentEvent CreateFSharpAgentEvent(
+        string eventType = "tool_invocation",
+        string agentId = "test-agent",
+        string sessionId = "test-session")
+    {
+        return new AgentEvent(
+            eventId: Guid.NewGuid(),
+            timestamp: DateTime.UtcNow,
+            sessionId: sessionId,
+            traceId: $"trace-{Guid.NewGuid():N}",
+            agentId: agentId,
+            agentName: "TestAgent",
+            eventType: eventType,
+            modelId: FSharpOption<string>.None,
+            inputTokens: FSharpOption<int>.None,
+            outputTokens: FSharpOption<int>.None,
+            latencyMs: FSharpOption<double>.None,
+            toolName: FSharpOption<string>.None,
+            toolInput: FSharpOption<string>.None,
+            toolOutput: FSharpOption<string>.None,
+            contentHash: FSharpOption<string>.None,
+            properties: MapModule.Empty<string, JsonElement>());
+    }
+
     public static AgentEvent CreateWithProperties(
         string agentId = "test-agent",
         Dictionary<string, JsonElement>? properties = null)
