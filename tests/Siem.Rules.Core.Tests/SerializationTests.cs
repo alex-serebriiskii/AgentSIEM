@@ -124,4 +124,52 @@ public class SerializationTests
 
         act.Should().Throw<Exception>();
     }
+
+    [Test]
+    public async Task ParseCondition_Exists_ReturnsExistsCondition()
+    {
+        var json = JsonValue("""
+        {
+            "type": "exists",
+            "field": "toolName"
+        }
+        """);
+
+        var condition = Serialization.parseCondition(json);
+
+        condition.IsExists.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task ParseCondition_AnyOf_ReturnsAnyOfCondition()
+    {
+        var json = JsonValue("""
+        {
+            "type": "any_of",
+            "field": "eventType",
+            "values": ["tool_invocation", "llm_call"]
+        }
+        """);
+
+        var condition = Serialization.parseCondition(json);
+
+        condition.IsAnyOf.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task ParseCondition_UnknownOperator_ThrowsException()
+    {
+        var json = JsonValue("""
+        {
+            "type": "field",
+            "field": "eventType",
+            "operator": "InvalidOp",
+            "value": "test"
+        }
+        """);
+
+        var act = () => Serialization.parseCondition(json);
+
+        act.Should().Throw<Exception>();
+    }
 }

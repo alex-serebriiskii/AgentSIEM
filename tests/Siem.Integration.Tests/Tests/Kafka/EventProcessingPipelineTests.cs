@@ -6,6 +6,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using NSubstitute;
+using Microsoft.Extensions.DependencyInjection;
 using Siem.Api.Alerting;
 using Siem.Api.Kafka;
 using Siem.Api.Normalization;
@@ -290,6 +291,128 @@ public class EventProcessingPipelineTests
         reader.GetDouble(3).Should().BeApproximately(3200.5, 0.1);
     }
 
+    // --- Phase 2: Rule detection tests ---
+
+    [Test]
+    public async Task ProcessAsync_WithMatchingRule_ReturnsProcessedAndCallsAlertPipeline()
+    {
+        // Arrange: insert a rule that matches tool_invocation events
+        await using (var db = IntegrationTestFixture.CreateDbContext())
+        {
+            db.Rules.Add(TestRuleFactory.CreateSingleEventRule(name: "Detect Tool Use"));
+            await db.SaveChangesAsync();
+        }
+
+        var (pipeline, alertPipeline) = await CreatePipelineWithRules();
+
+        var eventJson = JsonSerializer.Serialize(new
+        {
+            eventId = Guid.NewGuid(),
+            timestamp = DateTime.UtcNow,
+            sessionId = "sess-rule-match",
+            traceId = "trace-rule-match",
+            agentId = "agent-001",
+            agentName = "RuleTestAgent",
+            eventType = "tool_invocation",
+            toolName = "search"
+        });
+
+        var consumeResult = await ProduceAndConsume($"{TestTopic}-rule-match", eventJson);
+
+        // Act
+        var result = await pipeline.ProcessAsync(consumeResult, CancellationToken.None);
+        await pipeline.FlushBatchWriter();
+
+        // Assert
+        result.Should().Be(ProcessingResult.Processed);
+        await alertPipeline.Received(1).ProcessAsync(
+            Arg.Is<Evaluator.EvaluationResult>(r => r.Triggered),
+            Arg.Any<Siem.Rules.Core.AgentEvent>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task ProcessAsync_WithNonMatchingRule_ReturnsNoRulesTriggered()
+    {
+        // Arrange: rule matches tool_invocation, but we send llm_call
+        await using (var db = IntegrationTestFixture.CreateDbContext())
+        {
+            db.Rules.Add(TestRuleFactory.CreateSingleEventRule(name: "Detect Tool Use Only"));
+            await db.SaveChangesAsync();
+        }
+
+        var (pipeline, alertPipeline) = await CreatePipelineWithRules();
+
+        var eventJson = JsonSerializer.Serialize(new
+        {
+            eventId = Guid.NewGuid(),
+            timestamp = DateTime.UtcNow,
+            sessionId = "sess-no-match",
+            traceId = "trace-no-match",
+            agentId = "agent-002",
+            agentName = "NoMatchAgent",
+            eventType = "llm_call",
+            modelId = "gpt-4"
+        });
+
+        var consumeResult = await ProduceAndConsume($"{TestTopic}-no-match", eventJson);
+
+        // Act
+        var result = await pipeline.ProcessAsync(consumeResult, CancellationToken.None);
+
+        // Assert
+        result.Should().Be(ProcessingResult.NoRulesTriggered);
+        await alertPipeline.DidNotReceive().ProcessAsync(
+            Arg.Any<Evaluator.EvaluationResult>(),
+            Arg.Any<Siem.Rules.Core.AgentEvent>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task ProcessAsync_WithMatchingRule_EventStillPersistsToTimescaleDb()
+    {
+        // Arrange
+        await using (var db = IntegrationTestFixture.CreateDbContext())
+        {
+            db.Rules.Add(TestRuleFactory.CreateSingleEventRule(name: "Persist Check Rule"));
+            await db.SaveChangesAsync();
+        }
+
+        var (pipeline, _) = await CreatePipelineWithRules();
+
+        var eventId = Guid.NewGuid();
+        var eventJson = JsonSerializer.Serialize(new
+        {
+            eventId,
+            timestamp = DateTime.UtcNow,
+            sessionId = "sess-persist",
+            traceId = "trace-persist",
+            agentId = "agent-003",
+            agentName = "PersistAgent",
+            eventType = "tool_invocation",
+            toolName = "calculator"
+        });
+
+        var consumeResult = await ProduceAndConsume($"{TestTopic}-persist-rule", eventJson);
+
+        // Act
+        var result = await pipeline.ProcessAsync(consumeResult, CancellationToken.None);
+        await pipeline.FlushBatchWriter();
+
+        // Assert: rule triggered AND event persisted
+        result.Should().Be(ProcessingResult.Processed);
+
+        await using var conn = new NpgsqlConnection(IntegrationTestFixture.TimescaleConnectionString);
+        await conn.OpenAsync();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT COUNT(*) FROM agent_events WHERE event_id = @id";
+        cmd.Parameters.AddWithValue("id", eventId);
+        var count = (long)(await cmd.ExecuteScalarAsync())!;
+        count.Should().Be(1);
+    }
+
+    // --- Pipeline factory methods ---
+
     private EventProcessingPipeline CreatePipeline()
     {
         var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
@@ -312,6 +435,46 @@ public class EventProcessingPipelineTests
             batchWriter,
             alertPipeline,
             NullLogger<EventProcessingPipeline>.Instance);
+    }
+
+    private async Task<(EventProcessingPipeline Pipeline, IAlertPipeline MockAlert)> CreatePipelineWithRules()
+    {
+        var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
+        var batchWriter = new BatchEventWriter(
+            dataSource,
+            NullLogger<BatchEventWriter>.Instance,
+            maxBatchSize: 100,
+            maxFlushInterval: TimeSpan.FromMinutes(5));
+
+        var normalizer = new AgentEventNormalizer(
+            NullLogger<AgentEventNormalizer>.Instance);
+
+        var stateProvider = new RedisStateProvider(IntegrationTestFixture.RedisMultiplexer);
+        var rulesCache = new CompiledRulesCache(stateProvider);
+
+        // Load rules from DB, compile, and swap into cache
+        await using var db = IntegrationTestFixture.CreateDbContext();
+        var ruleLoader = new RuleLoadingService(db, NullLogger<RuleLoadingService>.Instance);
+        var rules = await ruleLoader.LoadEnabledRulesAsync();
+        var listResolver = Microsoft.FSharp.Core.FuncConvert.FromFunc<Guid, Microsoft.FSharp.Collections.FSharpSet<string>>(
+            _ => Microsoft.FSharp.Collections.SetModule.Empty<string>());
+        var compiledRules = Engine.compileAllRules(listResolver, rules.ToFSharpList());
+
+        // We need a ListCacheService for SwapEngine — create a minimal one
+        var scopeFactory = Substitute.For<IServiceScopeFactory>();
+        var listCache = new ListCacheService(scopeFactory, NullLogger<ListCacheService>.Instance);
+        rulesCache.SwapEngine(compiledRules, listCache);
+
+        var alertPipeline = Substitute.For<IAlertPipeline>();
+
+        var pipeline = new EventProcessingPipeline(
+            rulesCache,
+            normalizer,
+            batchWriter,
+            alertPipeline,
+            NullLogger<EventProcessingPipeline>.Instance);
+
+        return (pipeline, alertPipeline);
     }
 
     private static async Task<ConsumeResult<string, byte[]>> ProduceAndConsume(

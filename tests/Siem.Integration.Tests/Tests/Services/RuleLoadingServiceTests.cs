@@ -1,5 +1,9 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.FSharp.Collections;
+using Microsoft.FSharp.Control;
+using Microsoft.FSharp.Core;
+using NSubstitute;
 using Siem.Api.Services;
 using Siem.Integration.Tests.Fixtures;
 using Siem.Integration.Tests.Helpers;
@@ -101,5 +105,47 @@ public class RuleLoadingServiceTests
 
         var rule = rules[0];
         rule.EvaluationType.IsTemporal.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task RuleSurvivesRestart_CreateThenLoadInNewContext()
+    {
+        // Phase 2 exit criterion: rules persist across restarts.
+        // Simulate: create rule in one context, dispose it, load in a fresh context,
+        // compile, and evaluate against a matching event.
+        var ruleId = Guid.NewGuid();
+
+        // Step 1: Persist a rule (simulating what RulesController.CreateRule does)
+        await using (var db = IntegrationTestFixture.CreateDbContext())
+        {
+            db.Rules.Add(TestRuleFactory.CreateSingleEventRule(
+                id: ruleId,
+                name: "Persistent Rule"));
+            await db.SaveChangesAsync();
+        }
+        // Context disposed — simulates application restart
+
+        // Step 2: Load from a fresh context
+        await using var db2 = IntegrationTestFixture.CreateDbContext();
+        var service = new RuleLoadingService(
+            db2, NullLogger<RuleLoadingService>.Instance);
+        var rules = await service.LoadEnabledRulesAsync();
+
+        rules.Should().HaveCount(1);
+        rules[0].Id.Should().Be(ruleId);
+
+        // Step 3: Compile and evaluate
+        var listResolver = FuncConvert.FromFunc<Guid, FSharpSet<string>>(
+            _ => SetModule.Empty<string>());
+        var compiled = Compiler.compileRule(listResolver, rules[0]);
+
+        var stateProvider = Substitute.For<Evaluator.IStateProvider>();
+        var result = await FSharpAsync.StartAsTask(
+            Evaluator.evaluate(stateProvider, compiled,
+                TestEventFactory.CreateFSharpAgentEvent(eventType: "tool_invocation")),
+            FSharpOption<TaskCreationOptions>.None,
+            FSharpOption<CancellationToken>.None);
+
+        result.Triggered.Should().BeTrue();
     }
 }
