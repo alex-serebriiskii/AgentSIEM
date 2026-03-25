@@ -47,13 +47,18 @@ Expected: `1000`
 
 ### 3. Trigger a rebalance
 
-Start a second temporary consumer in the same group. This forces Kafka to rebalance partitions between the two consumers:
+Start a second temporary consumer in the same group. This forces Kafka to rebalance partitions between the two consumers. We must use `kafka-console-consumer.sh` from inside the Kafka container (not kcat) because the siem-api consumer uses the `CooperativeSticky` assignment strategy — all group members must use the same protocol:
 
 ```bash
-kcat -C -b localhost:9092 -t agent-events -G siem-processors -o end -c 1
+docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 \
+  --topic agent-events \
+  --group siem-processors \
+  --consumer-property partition.assignment.strategy=org.apache.kafka.clients.consumer.CooperativeStickyAssignor \
+  --timeout-ms 5000
 ```
 
-This joins the `siem-processors` consumer group, triggers a rebalance, reads one message, and exits (triggering another rebalance on leave).
+This joins the `siem-processors` consumer group (triggering a rebalance), reads for 5 seconds, then exits on timeout (triggering another rebalance on leave).
 
 Watch the siem-api logs for rebalance events:
 
