@@ -31,7 +31,7 @@ public class DashboardIntegrationTests
         await RefreshAggregate("agent_activity_hourly");
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new DashboardController(db);
+        var controller = new DashboardController(new Siem.Api.Services.DashboardService(db));
 
         var result = await controller.GetTopAgents(hours: 24, limit: 10, ct: CancellationToken.None);
 
@@ -56,7 +56,7 @@ public class DashboardIntegrationTests
         await RefreshAggregate("agent_activity_hourly");
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new DashboardController(db);
+        var controller = new DashboardController(new Siem.Api.Services.DashboardService(db));
 
         var result = await controller.GetEventVolume(hours: 24, ct: CancellationToken.None);
 
@@ -83,7 +83,7 @@ public class DashboardIntegrationTests
         db.Alerts.Add(CreateAlert("low", "resolved"));
         await db.SaveChangesAsync();
 
-        var controller = new DashboardController(db);
+        var controller = new DashboardController(new Siem.Api.Services.DashboardService(db));
         var result = await controller.GetAlertDistribution(hours: 24, ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
@@ -102,7 +102,7 @@ public class DashboardIntegrationTests
         await RefreshAggregate("tool_usage_hourly");
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new DashboardController(db);
+        var controller = new DashboardController(new Siem.Api.Services.DashboardService(db));
 
         var result = await controller.GetToolUsage(hours: 24, limit: 10, ct: CancellationToken.None);
 
@@ -126,7 +126,7 @@ public class DashboardIntegrationTests
         await RefreshAggregate("agent_activity_hourly");
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new DashboardController(db);
+        var controller = new DashboardController(new Siem.Api.Services.DashboardService(db));
 
         var result = await controller.GetTopAgents(hours: 24, ct: CancellationToken.None);
 

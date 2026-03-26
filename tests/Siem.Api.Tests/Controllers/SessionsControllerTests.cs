@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Siem.Api.Controllers;
 using Siem.Api.Data;
 using Siem.Api.Models.Responses;
+using Siem.Api.Services;
 using Siem.Api.Tests.Controllers.Helpers;
 
 namespace Siem.Api.Tests.Controllers;
@@ -17,7 +18,8 @@ public class SessionsControllerTests : IDisposable
         _db = DbContextFactory.Create();
         // NpgsqlDataSource is null — timeline endpoint requires real PostgreSQL
         // and is covered by integration tests. EF-only endpoints work fine.
-        _controller = new SessionsController(_db, null!);
+        var service = new SessionService(_db, null!);
+        _controller = new SessionsController(service);
     }
 
     public void Dispose() => _db.Dispose();

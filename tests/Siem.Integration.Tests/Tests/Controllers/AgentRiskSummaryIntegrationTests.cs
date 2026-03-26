@@ -29,7 +29,7 @@ public class AgentRiskSummaryIntegrationTests
         await SeedAlertForAgent(agentId);
 
         await using var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
-        var controller = new AgentsController(dataSource);
+        var controller = new AgentsController(new Siem.Api.Services.AgentService(dataSource));
 
         var result = await controller.GetRiskSummary(agentId, ct: CancellationToken.None);
 
@@ -50,7 +50,7 @@ public class AgentRiskSummaryIntegrationTests
     public async Task GetRiskSummary_UnknownAgent_ReturnsEmptySummary()
     {
         await using var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
-        var controller = new AgentsController(dataSource);
+        var controller = new AgentsController(new Siem.Api.Services.AgentService(dataSource));
 
         var result = await controller.GetRiskSummary("nonexistent-agent", ct: CancellationToken.None);
 
@@ -73,7 +73,7 @@ public class AgentRiskSummaryIntegrationTests
         await SeedEventsForAgent(agentId, 10, hoursAgo: 48);
 
         await using var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
-        var controller = new AgentsController(dataSource);
+        var controller = new AgentsController(new Siem.Api.Services.AgentService(dataSource));
 
         var result = await controller.GetRiskSummary(agentId, lookback: "2 hours", ct: CancellationToken.None);
 
@@ -93,7 +93,7 @@ public class AgentRiskSummaryIntegrationTests
         await SeedAlertForAgent(agentId);
 
         await using var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
-        var controller = new AgentsController(dataSource);
+        var controller = new AgentsController(new Siem.Api.Services.AgentService(dataSource));
 
         // Warm up
         await controller.GetRiskSummary(agentId, ct: CancellationToken.None);

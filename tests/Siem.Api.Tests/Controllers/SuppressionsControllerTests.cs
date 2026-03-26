@@ -4,6 +4,7 @@ using Siem.Api.Controllers;
 using Siem.Api.Data;
 using Siem.Api.Models.Requests;
 using Siem.Api.Models.Responses;
+using Siem.Api.Services;
 using Siem.Api.Tests.Controllers.Helpers;
 
 namespace Siem.Api.Tests.Controllers;
@@ -11,12 +12,14 @@ namespace Siem.Api.Tests.Controllers;
 public class SuppressionsControllerTests : IDisposable
 {
     private readonly SiemDbContext _db;
+    private readonly ISuppressionService _service;
     private readonly SuppressionsController _controller;
 
     public SuppressionsControllerTests()
     {
         _db = DbContextFactory.Create();
-        _controller = new SuppressionsController(_db);
+        _service = new SuppressionService(_db);
+        _controller = new SuppressionsController(_service);
     }
 
     public void Dispose() => _db.Dispose();

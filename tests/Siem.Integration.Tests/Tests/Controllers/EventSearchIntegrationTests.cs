@@ -23,13 +23,8 @@ public class EventSearchIntegrationTests
     private static (List<EventResponse> Data, int TotalCount) ExtractResult(IActionResult result)
     {
         var ok = (OkObjectResult)result;
-        var json = JsonSerializer.Serialize(ok.Value);
-        var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-        var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var data = JsonSerializer.Deserialize<List<EventResponse>>(
-            root.GetProperty("data").GetRawText(), opts)!;
-        return (data, root.GetProperty("totalCount").GetInt32());
+        var paginated = (PaginatedResult<EventResponse>)ok.Value!;
+        return (paginated.Data.ToList(), paginated.TotalCount);
     }
 
     [Test]
@@ -40,7 +35,7 @@ public class EventSearchIntegrationTests
         await SeedEvents("agent-1", 3, hoursAgo: 48);
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new EventsController(db);
+        var controller = new EventsController(new Siem.Api.Services.EventService(db));
 
         var result = await controller.SearchEvents(
             start: new DateTimeOffset(now.AddHours(-2), TimeSpan.Zero),
@@ -58,7 +53,7 @@ public class EventSearchIntegrationTests
         await SeedEvents("agent-B", 2, hoursAgo: 0);
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new EventsController(db);
+        var controller = new EventsController(new Siem.Api.Services.EventService(db));
 
         var result = await controller.SearchEvents(
             start: new DateTimeOffset(DateTime.UtcNow.AddHours(-1), TimeSpan.Zero),
@@ -77,7 +72,7 @@ public class EventSearchIntegrationTests
         await SeedLlmEvents("agent-1", 3, hoursAgo: 0);
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new EventsController(db);
+        var controller = new EventsController(new Siem.Api.Services.EventService(db));
 
         var result = await controller.SearchEvents(
             start: new DateTimeOffset(DateTime.UtcNow.AddHours(-1), TimeSpan.Zero),
@@ -96,7 +91,7 @@ public class EventSearchIntegrationTests
         await SeedEventsWithTool("agent-1", "file_read", 2, hoursAgo: 0);
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new EventsController(db);
+        var controller = new EventsController(new Siem.Api.Services.EventService(db));
 
         var result = await controller.SearchEvents(
             start: new DateTimeOffset(DateTime.UtcNow.AddHours(-1), TimeSpan.Zero),
@@ -116,7 +111,7 @@ public class EventSearchIntegrationTests
         await SeedEventsWithProperties("agent-1", """{"documentId":"public-456"}""", 3, hoursAgo: 0);
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new EventsController(db);
+        var controller = new EventsController(new Siem.Api.Services.EventService(db));
 
         var result = await controller.SearchEvents(
             start: new DateTimeOffset(DateTime.UtcNow.AddHours(-1), TimeSpan.Zero),
@@ -133,7 +128,7 @@ public class EventSearchIntegrationTests
         await SeedEvents("agent-1", 10, hoursAgo: 0);
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new EventsController(db);
+        var controller = new EventsController(new Siem.Api.Services.EventService(db));
 
         var result = await controller.SearchEvents(
             start: new DateTimeOffset(DateTime.UtcNow.AddHours(-1), TimeSpan.Zero),
@@ -142,15 +137,13 @@ public class EventSearchIntegrationTests
             ct: CancellationToken.None);
 
         var ok = (OkObjectResult)result;
-        var json = JsonSerializer.Serialize(ok.Value);
-        var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
+        var paginated = (PaginatedResult<EventResponse>)ok.Value!;
 
-        root.GetProperty("page").GetInt32().Should().Be(2);
-        root.GetProperty("pageSize").GetInt32().Should().Be(3);
-        root.GetProperty("totalCount").GetInt32().Should().Be(10);
-        root.GetProperty("totalPages").GetInt32().Should().Be(4);
-        root.GetProperty("data").GetArrayLength().Should().Be(3);
+        paginated.Page.Should().Be(2);
+        paginated.PageSize.Should().Be(3);
+        paginated.TotalCount.Should().Be(10);
+        paginated.TotalPages.Should().Be(4);
+        paginated.Data.Should().HaveCount(3);
     }
 
     [Test]
@@ -159,7 +152,7 @@ public class EventSearchIntegrationTests
         await SeedEvents("agent-1", 5, hoursAgo: 0);
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new EventsController(db);
+        var controller = new EventsController(new Siem.Api.Services.EventService(db));
 
         var result = await controller.SearchEvents(
             start: new DateTimeOffset(DateTime.UtcNow.AddHours(-1), TimeSpan.Zero),

@@ -4,6 +4,7 @@ using NSubstitute;
 using Siem.Api.Controllers;
 using Siem.Api.Data;
 using Siem.Api.Models.Requests;
+using Siem.Api.Models.Responses;
 using Siem.Api.Services;
 using Siem.Api.Tests.Controllers.Helpers;
 
@@ -13,13 +14,15 @@ public class ListsControllerTests : IDisposable
 {
     private readonly SiemDbContext _db;
     private readonly IRecompilationCoordinator _coordinator;
+    private readonly IListService _service;
     private readonly ListsController _controller;
 
     public ListsControllerTests()
     {
         _db = DbContextFactory.Create();
         _coordinator = Substitute.For<IRecompilationCoordinator>();
-        _controller = new ListsController(_db, _coordinator);
+        _service = new ListService(_db, _coordinator);
+        _controller = new ListsController(_service);
     }
 
     public void Dispose() => _db.Dispose();
@@ -37,7 +40,10 @@ public class ListsControllerTests : IDisposable
         var result = await _controller.ListAll(CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        ok.Value.Should().NotBeNull();
+        var lists = ok.Value.Should().BeAssignableTo<IEnumerable<ManagedListSummaryResponse>>().Subject.ToList();
+        lists.Should().HaveCount(1);
+        lists[0].Name.Should().Be("Approved Tools");
+        lists[0].MemberCount.Should().Be(2);
     }
 
     [Test]
@@ -46,7 +52,8 @@ public class ListsControllerTests : IDisposable
         var result = await _controller.ListAll(CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        ok.Value.Should().NotBeNull();
+        var lists = ok.Value.Should().BeAssignableTo<IEnumerable<ManagedListSummaryResponse>>().Subject.ToList();
+        lists.Should().BeEmpty();
     }
 
     // --- GetList ---
@@ -60,7 +67,11 @@ public class ListsControllerTests : IDisposable
         await _db.SaveChangesAsync();
 
         var result = await _controller.GetList(list.Id, CancellationToken.None);
-        result.Should().BeOfType<OkObjectResult>();
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = ok.Value.Should().BeOfType<ManagedListDetailResponse>().Subject;
+        response.Name.Should().Be("Blocked Agents");
+        response.Members.Should().HaveCount(1);
     }
 
     [Test]

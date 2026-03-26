@@ -1,10 +1,10 @@
-using System.Text.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Siem.Api.Controllers;
 using Siem.Api.Data;
 using Siem.Api.Models.Requests;
 using Siem.Api.Models.Responses;
+using Siem.Api.Services;
 using Siem.Api.Tests.Controllers.Helpers;
 
 namespace Siem.Api.Tests.Controllers;
@@ -17,31 +17,16 @@ public class AlertsControllerTests : IDisposable
     public AlertsControllerTests()
     {
         _db = DbContextFactory.Create();
-        _controller = new AlertsController(_db);
+        var service = new AlertService(_db);
+        _controller = new AlertsController(service);
     }
 
     public void Dispose() => _db.Dispose();
 
-    // Helper to extract paginated response data
-    private static (List<AlertResponse> Data, int Page, int PageSize, int TotalCount, int TotalPages)
-        ExtractPaginatedResult(IActionResult result)
+    private static PaginatedResult<AlertResponse> ExtractPaginatedResult(IActionResult result)
     {
         var ok = (OkObjectResult)result;
-        var json = JsonSerializer.Serialize(ok.Value);
-        var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-
-        var data = JsonSerializer.Deserialize<List<AlertResponse>>(
-            root.GetProperty("data").GetRawText(),
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-
-        return (
-            data,
-            root.GetProperty("page").GetInt32(),
-            root.GetProperty("pageSize").GetInt32(),
-            root.GetProperty("totalCount").GetInt32(),
-            root.GetProperty("totalPages").GetInt32()
-        );
+        return (PaginatedResult<AlertResponse>)ok.Value!;
     }
 
     // --- ListAlerts ---
@@ -56,13 +41,13 @@ public class AlertsControllerTests : IDisposable
 
         var result = await _controller.ListAlerts(null, null, null, ct: CancellationToken.None);
 
-        var (alerts, page, pageSize, totalCount, _) = ExtractPaginatedResult(result);
-        alerts.Should().HaveCount(2);
-        alerts[0].AlertId.Should().Be(newer.AlertId);
-        alerts[1].AlertId.Should().Be(older.AlertId);
-        page.Should().Be(1);
-        pageSize.Should().Be(50);
-        totalCount.Should().Be(2);
+        var paginated = ExtractPaginatedResult(result);
+        paginated.Data.Should().HaveCount(2);
+        paginated.Data[0].AlertId.Should().Be(newer.AlertId);
+        paginated.Data[1].AlertId.Should().Be(older.AlertId);
+        paginated.Page.Should().Be(1);
+        paginated.PageSize.Should().Be(50);
+        paginated.TotalCount.Should().Be(2);
     }
 
     [Test]
@@ -74,10 +59,10 @@ public class AlertsControllerTests : IDisposable
 
         var result = await _controller.ListAlerts("open", null, null, ct: CancellationToken.None);
 
-        var (alerts, _, _, totalCount, _) = ExtractPaginatedResult(result);
-        alerts.Should().HaveCount(1);
-        alerts[0].Status.Should().Be("open");
-        totalCount.Should().Be(1);
+        var paginated = ExtractPaginatedResult(result);
+        paginated.Data.Should().HaveCount(1);
+        paginated.Data[0].Status.Should().Be("open");
+        paginated.TotalCount.Should().Be(1);
     }
 
     [Test]
@@ -89,10 +74,10 @@ public class AlertsControllerTests : IDisposable
 
         var result = await _controller.ListAlerts(null, "high", null, ct: CancellationToken.None);
 
-        var (alerts, _, _, totalCount, _) = ExtractPaginatedResult(result);
-        alerts.Should().HaveCount(1);
-        alerts[0].Severity.Should().Be("high");
-        totalCount.Should().Be(1);
+        var paginated = ExtractPaginatedResult(result);
+        paginated.Data.Should().HaveCount(1);
+        paginated.Data[0].Severity.Should().Be("high");
+        paginated.TotalCount.Should().Be(1);
     }
 
     [Test]
@@ -104,10 +89,10 @@ public class AlertsControllerTests : IDisposable
 
         var result = await _controller.ListAlerts(null, null, "agent-A", ct: CancellationToken.None);
 
-        var (alerts, _, _, totalCount, _) = ExtractPaginatedResult(result);
-        alerts.Should().HaveCount(1);
-        alerts[0].AgentId.Should().Be("agent-A");
-        totalCount.Should().Be(1);
+        var paginated = ExtractPaginatedResult(result);
+        paginated.Data.Should().HaveCount(1);
+        paginated.Data[0].AgentId.Should().Be("agent-A");
+        paginated.TotalCount.Should().Be(1);
     }
 
     [Test]
@@ -115,11 +100,11 @@ public class AlertsControllerTests : IDisposable
     {
         var result = await _controller.ListAlerts(null, null, null, ct: CancellationToken.None);
 
-        var (alerts, page, _, totalCount, totalPages) = ExtractPaginatedResult(result);
-        alerts.Should().BeEmpty();
-        page.Should().Be(1);
-        totalCount.Should().Be(0);
-        totalPages.Should().Be(0);
+        var paginated = ExtractPaginatedResult(result);
+        paginated.Data.Should().BeEmpty();
+        paginated.Page.Should().Be(1);
+        paginated.TotalCount.Should().Be(0);
+        paginated.TotalPages.Should().Be(0);
     }
 
     // --- Pagination ---
@@ -133,12 +118,12 @@ public class AlertsControllerTests : IDisposable
 
         var result = await _controller.ListAlerts(null, null, null, ct: CancellationToken.None);
 
-        var (alerts, page, pageSize, totalCount, totalPages) = ExtractPaginatedResult(result);
-        alerts.Should().HaveCount(3);
-        page.Should().Be(1);
-        pageSize.Should().Be(50);
-        totalCount.Should().Be(3);
-        totalPages.Should().Be(1);
+        var paginated = ExtractPaginatedResult(result);
+        paginated.Data.Should().HaveCount(3);
+        paginated.Page.Should().Be(1);
+        paginated.PageSize.Should().Be(50);
+        paginated.TotalCount.Should().Be(3);
+        paginated.TotalPages.Should().Be(1);
     }
 
     [Test]
@@ -151,12 +136,12 @@ public class AlertsControllerTests : IDisposable
 
         var result = await _controller.ListAlerts(null, null, null, page: 2, pageSize: 2, ct: CancellationToken.None);
 
-        var (alerts, page, pageSize, totalCount, totalPages) = ExtractPaginatedResult(result);
-        alerts.Should().HaveCount(2);
-        page.Should().Be(2);
-        pageSize.Should().Be(2);
-        totalCount.Should().Be(5);
-        totalPages.Should().Be(3);
+        var paginated = ExtractPaginatedResult(result);
+        paginated.Data.Should().HaveCount(2);
+        paginated.Page.Should().Be(2);
+        paginated.PageSize.Should().Be(2);
+        paginated.TotalCount.Should().Be(5);
+        paginated.TotalPages.Should().Be(3);
     }
 
     [Test]
@@ -167,9 +152,9 @@ public class AlertsControllerTests : IDisposable
 
         var result = await _controller.ListAlerts(null, null, null, page: 5, pageSize: 10, ct: CancellationToken.None);
 
-        var (alerts, _, _, totalCount, _) = ExtractPaginatedResult(result);
-        alerts.Should().BeEmpty();
-        totalCount.Should().Be(1);
+        var paginated = ExtractPaginatedResult(result);
+        paginated.Data.Should().BeEmpty();
+        paginated.TotalCount.Should().Be(1);
     }
 
     // --- GetAlert ---

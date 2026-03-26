@@ -1,8 +1,9 @@
-using System.Text.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Siem.Api.Controllers;
 using Siem.Api.Data;
+using Siem.Api.Models.Responses;
+using Siem.Api.Services;
 using Siem.Api.Tests.Controllers.Helpers;
 
 namespace Siem.Api.Tests.Controllers;
@@ -15,7 +16,8 @@ public class DashboardControllerTests : IDisposable
     public DashboardControllerTests()
     {
         _db = DbContextFactory.Create();
-        _controller = new DashboardController(_db);
+        var service = new DashboardService(_db);
+        _controller = new DashboardController(service);
     }
 
     public void Dispose() => _db.Dispose();
@@ -34,9 +36,7 @@ public class DashboardControllerTests : IDisposable
         var result = await _controller.GetAlertDistribution(hours: 24, ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        var json = JsonSerializer.Serialize(ok.Value);
-        var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var items = JsonSerializer.Deserialize<List<AlertDistributionItem>>(json, opts)!;
+        var items = ok.Value.Should().BeAssignableTo<IReadOnlyList<AlertDistributionResult>>().Subject;
 
         items.Should().HaveCount(3);
         // Ordered by count descending: high/open=2, then low/open=1, high/resolved=1
@@ -55,16 +55,12 @@ public class DashboardControllerTests : IDisposable
         var result = await _controller.GetAlertDistribution(hours: 24, ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        var json = JsonSerializer.Serialize(ok.Value);
-        var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var items = JsonSerializer.Deserialize<List<AlertDistributionItem>>(json, opts)!;
+        var items = ok.Value.Should().BeAssignableTo<IReadOnlyList<AlertDistributionResult>>().Subject;
 
         // Only 1 alert within the 24-hour window
         items.Should().HaveCount(1);
         items[0].Count.Should().Be(1);
     }
-
-    private record AlertDistributionItem(string Severity, string Status, int Count);
 
     [Test]
     public async Task GetAlertDistribution_NoAlerts_ReturnsEmptyList()
@@ -72,8 +68,7 @@ public class DashboardControllerTests : IDisposable
         var result = await _controller.GetAlertDistribution(ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        var json = JsonSerializer.Serialize(ok.Value);
-        var items = JsonSerializer.Deserialize<List<JsonElement>>(json)!;
+        var items = ok.Value.Should().BeAssignableTo<IReadOnlyList<AlertDistributionResult>>().Subject;
         items.Should().BeEmpty();
     }
 
@@ -88,8 +83,7 @@ public class DashboardControllerTests : IDisposable
         var result = await _controller.GetTopAgents(ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        var json = JsonSerializer.Serialize(ok.Value);
-        var items = JsonSerializer.Deserialize<List<JsonElement>>(json)!;
+        var items = ok.Value.Should().BeAssignableTo<IReadOnlyList<TopAgentResult>>().Subject;
         items.Should().BeEmpty();
     }
 
@@ -99,8 +93,7 @@ public class DashboardControllerTests : IDisposable
         var result = await _controller.GetEventVolume(ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        var json = JsonSerializer.Serialize(ok.Value);
-        var items = JsonSerializer.Deserialize<List<JsonElement>>(json)!;
+        var items = ok.Value.Should().BeAssignableTo<IReadOnlyList<EventVolumeResult>>().Subject;
         items.Should().BeEmpty();
     }
 
@@ -110,8 +103,7 @@ public class DashboardControllerTests : IDisposable
         var result = await _controller.GetToolUsage(ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        var json = JsonSerializer.Serialize(ok.Value);
-        var items = JsonSerializer.Deserialize<List<JsonElement>>(json)!;
+        var items = ok.Value.Should().BeAssignableTo<IReadOnlyList<ToolUsageResult>>().Subject;
         items.Should().BeEmpty();
     }
 }

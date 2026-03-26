@@ -42,6 +42,18 @@ builder.Services.AddHostedService(sp =>
     sp.GetRequiredService<RecompilationCoordinator>());
 
 // ---------------------------------------------------------------------------
+// API services (controller backing)
+// ---------------------------------------------------------------------------
+builder.Services.AddScoped<ISuppressionService, SuppressionService>();
+builder.Services.AddScoped<IEventService, EventService>();
+builder.Services.AddScoped<IRuleService, RuleService>();
+builder.Services.AddScoped<IAlertService, AlertService>();
+builder.Services.AddScoped<IListService, ListService>();
+builder.Services.AddScoped<IAgentService, AgentService>();
+builder.Services.AddScoped<ISessionService, SessionService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+
+// ---------------------------------------------------------------------------
 // Kafka consumer pipeline
 // ---------------------------------------------------------------------------
 builder.Services.AddKafkaPipeline(configuration);
