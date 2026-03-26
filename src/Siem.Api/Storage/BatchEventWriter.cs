@@ -65,21 +65,7 @@ public class BatchEventWriter : IAsyncDisposable
     }
 
     /// <summary>
-    /// Enqueue an event for batch writing. Non-blocking under normal conditions;
-    /// blocks only if the buffer is completely full (backpressure from the DB).
-    /// </summary>
-    public void Enqueue(AgentEvent evt)
-    {
-        if (!_buffer.Writer.TryWrite(evt))
-        {
-            // Buffer full — backpressure from the DB.
-            // Block briefly rather than dropping events.
-            _buffer.Writer.WriteAsync(evt).AsTask().GetAwaiter().GetResult();
-        }
-    }
-
-    /// <summary>
-    /// Async enqueue for callers that can await backpressure.
+    /// Enqueue an event for batch writing. Awaits backpressure if the buffer is full.
     /// </summary>
     public async ValueTask EnqueueAsync(AgentEvent evt)
     {

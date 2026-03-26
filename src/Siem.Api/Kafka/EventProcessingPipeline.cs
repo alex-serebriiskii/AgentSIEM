@@ -81,7 +81,7 @@ public class EventProcessingPipeline
 
         // Stage 3: Buffer for batch write to TimescaleDB
         // Events are always persisted, regardless of whether rules trigger.
-        _batchWriter.Enqueue(agentEvent);
+        await _batchWriter.EnqueueAsync(agentEvent);
 
         // Stage 3b: Track session (best-effort — does not block pipeline on failure)
         await _sessionTracker.TrackEventAsync(

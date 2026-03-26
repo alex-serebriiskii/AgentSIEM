@@ -165,7 +165,7 @@ public class DashboardIntegrationTests
                 agentId: agentId,
                 toolName: toolName,
                 timestamp: baseTime.AddSeconds(i));
-            writer.Enqueue(evt);
+            await writer.EnqueueAsync(evt);
         }
         await writer.FlushAsync();
     }

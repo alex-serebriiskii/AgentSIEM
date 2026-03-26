@@ -135,7 +135,7 @@ public class SessionTimelineIntegrationTests
                 sessionId: sessionId,
                 toolName: $"tool-{i % 5}",
                 timestamp: baseTime.AddSeconds(i));
-            writer.Enqueue(evt);
+            await writer.EnqueueAsync(evt);
         }
         await writer.FlushAsync();
     }

@@ -185,7 +185,7 @@ public class EventSearchIntegrationTests
                 agentId: agentId,
                 toolName: toolName,
                 timestamp: baseTime.AddSeconds(i));
-            writer.Enqueue(evt);
+            await writer.EnqueueAsync(evt);
         }
         await writer.FlushAsync();
     }
@@ -204,7 +204,7 @@ public class EventSearchIntegrationTests
             var evt = TestEventFactory.CreateLlmCall(
                 agentId: agentId,
                 sessionId: $"sess-{Guid.NewGuid():N}");
-            writer.Enqueue(evt);
+            await writer.EnqueueAsync(evt);
         }
         await writer.FlushAsync();
     }

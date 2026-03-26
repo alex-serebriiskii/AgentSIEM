@@ -90,7 +90,7 @@ public class KafkaConsumerWorker : BackgroundService
 
                 // Flush the batch writer before losing partitions —
                 // we need to commit offsets for everything we've buffered
-                _pipeline.FlushBatchWriter().GetAwaiter().GetResult();
+                Task.Run(() => _pipeline.FlushBatchWriter()).GetAwaiter().GetResult();
             })
             .SetErrorHandler((_, error) =>
             {
