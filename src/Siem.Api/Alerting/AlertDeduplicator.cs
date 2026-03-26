@@ -1,3 +1,4 @@
+using Siem.Api.Shared;
 using StackExchange.Redis;
 
 namespace Siem.Api.Alerting;
@@ -24,7 +25,7 @@ public class AlertDeduplicator : IAlertDeduplicator
     /// </summary>
     public async Task<bool> IsDuplicateAsync(string fingerprint, CancellationToken ct = default)
     {
-        var key = $"alert:dedup:{fingerprint}";
+        var key = RedisKeys.AlertDedup(fingerprint);
 
         // SET NX = set if not exists. Returns false if key already existed.
         var wasSet = await _redis.StringSetAsync(

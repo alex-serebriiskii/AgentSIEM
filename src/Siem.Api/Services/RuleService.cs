@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Siem.Api.Data;
 using Siem.Api.Data.Entities;
 using Siem.Api.Models.Requests;
@@ -7,7 +8,7 @@ using FSharpSerialization = Siem.Rules.Core.Serialization;
 
 namespace Siem.Api.Services;
 
-public class RuleService(SiemDbContext db, IRecompilationCoordinator coordinator) : IRuleService
+public class RuleService(SiemDbContext db, IRecompilationCoordinator coordinator, ILogger<RuleService> logger) : IRuleService
 {
     public async Task<ServiceResult<RuleResponse>> CreateAsync(
         CreateRuleRequest request, CancellationToken ct)
@@ -19,7 +20,11 @@ public class RuleService(SiemDbContext db, IRecompilationCoordinator coordinator
         {
             FSharpSerialization.parseCondition(request.ConditionJson);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException
+                                 and not StackOverflowException
+                                 and not NpgsqlException
+                                 and not TimeoutException
+                                 and not OperationCanceledException)
         {
             return ServiceResult<RuleResponse>.Fail("Invalid condition tree", ex.Message);
         }
@@ -46,8 +51,8 @@ public class RuleService(SiemDbContext db, IRecompilationCoordinator coordinator
         db.Rules.Add(entity);
         await db.SaveChangesAsync(ct);
 
-        coordinator.SignalInvalidation(
-            new InvalidationSignal(InvalidationReason.RuleCreated, entity.Id));
+        InvalidationHelper.SignalWithRetry(coordinator,
+            new InvalidationSignal(InvalidationReason.RuleCreated, entity.Id), logger);
 
         return ServiceResult<RuleResponse>.Success(RuleResponse.FromEntity(entity));
     }
@@ -90,7 +95,11 @@ public class RuleService(SiemDbContext db, IRecompilationCoordinator coordinator
             {
                 FSharpSerialization.parseCondition(request.ConditionJson.Value);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OutOfMemoryException
+                                     and not StackOverflowException
+                                     and not NpgsqlException
+                                     and not TimeoutException
+                                     and not OperationCanceledException)
             {
                 return ServiceResult<RuleResponse>.Fail("Invalid condition tree", ex.Message);
             }
@@ -111,8 +120,8 @@ public class RuleService(SiemDbContext db, IRecompilationCoordinator coordinator
         rule.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
-        coordinator.SignalInvalidation(
-            new InvalidationSignal(InvalidationReason.RuleUpdated, id));
+        InvalidationHelper.SignalWithRetry(coordinator,
+            new InvalidationSignal(InvalidationReason.RuleUpdated, id), logger);
 
         return ServiceResult<RuleResponse>.Success(RuleResponse.FromEntity(rule));
     }
@@ -127,8 +136,8 @@ public class RuleService(SiemDbContext db, IRecompilationCoordinator coordinator
         rule.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
-        coordinator.SignalInvalidation(
-            new InvalidationSignal(InvalidationReason.RuleDeleted, id));
+        InvalidationHelper.SignalWithRetry(coordinator,
+            new InvalidationSignal(InvalidationReason.RuleDeleted, id), logger);
 
         return ServiceResult<bool>.Success(true);
     }

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Siem.Api.Controllers;
 using Siem.Api.Data;
@@ -21,7 +22,8 @@ public class ListsControllerTests : IDisposable
     {
         _db = DbContextFactory.Create();
         _coordinator = Substitute.For<IRecompilationCoordinator>();
-        _service = new ListService(_db, _coordinator);
+        _coordinator.SignalInvalidation(Arg.Any<InvalidationSignal>()).Returns(true);
+        _service = new ListService(_db, _coordinator, NullLogger<ListService>.Instance);
         _controller = new ListsController(_service);
     }
 

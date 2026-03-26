@@ -28,7 +28,7 @@ public class AlertPipelineTests
         _throttler = Substitute.For<IAlertThrottler>();
         _router = Substitute.For<INotificationRouter>();
 
-        _suppression = Substitute.For<SuppressionChecker>(default(SiemDbContext)!);
+        _suppression = Substitute.For<SuppressionChecker>(default(SiemDbContext)!, default(Microsoft.Extensions.Logging.ILogger<SuppressionChecker>)!);
         _enricher = Substitute.For<AlertEnricher>(default(SiemDbContext)!, default(Microsoft.Extensions.Logging.ILogger<AlertEnricher>)!);
         _persistence = Substitute.For<AlertPersistence>(default(SiemDbContext)!, default(Microsoft.Extensions.Logging.ILogger<AlertPersistence>)!);
 

@@ -76,13 +76,15 @@ public class RecompilationCoordinator : BackgroundService, IRecompilationCoordin
     /// Public API: any service can signal that recompilation is needed.
     /// This is fire-and-forget from the caller's perspective.
     /// </summary>
-    public void SignalInvalidation(InvalidationSignal signal)
+    public bool SignalInvalidation(InvalidationSignal signal)
     {
         if (!_channel.Writer.TryWrite(signal))
         {
             _logger.LogWarning(
                 "Invalidation channel full, signal dropped: {Reason}", signal.Reason);
+            return false;
         }
+        return true;
     }
 
     /// <summary>

@@ -17,7 +17,7 @@ public class AlertsControllerTests : IDisposable
     public AlertsControllerTests()
     {
         _db = DbContextFactory.Create();
-        var service = new AlertService(_db);
+        var service = new AlertService(_db, new PaginationConfig());
         _controller = new AlertsController(service);
     }
 

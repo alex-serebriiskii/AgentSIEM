@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Siem.Api.Data;
+using Siem.Api.Shared;
 using Siem.Rules.Core;
 using static Siem.Rules.Core.Evaluator;
 
@@ -73,9 +74,11 @@ public class AlertEnricher
                     }
                 }
             }
-            catch
+            catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException)
             {
-                // Non-critical, proceed without labels
+                _logger.LogWarning(ex,
+                    "Failed to parse labels from ActionsJson for rule {RuleId}",
+                    result.RuleId);
             }
         }
 
@@ -86,14 +89,7 @@ public class AlertEnricher
             ruleContext[kvp.Key] = kvp.Value;
         }
 
-        var severityStr = result.Severity.Tag switch
-        {
-            Severity.Tags.Low => "low",
-            Severity.Tags.Medium => "medium",
-            Severity.Tags.High => "high",
-            Severity.Tags.Critical => "critical",
-            _ => "medium"
-        };
+        var severityStr = SeverityMapping.ToString(result.Severity);
 
         return new EnrichedAlert
         {

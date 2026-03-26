@@ -1,5 +1,6 @@
 using System.Diagnostics.Metrics;
 using Siem.Api.Alerting;
+using Siem.Api.Shared;
 
 namespace Siem.Api.Notifications;
 
@@ -20,14 +21,6 @@ public class NotificationRouter : INotificationRouter
     private static readonly Counter<long> NotificationsFailed =
         Meter.CreateCounter<long>("siem.notifications.failed");
 
-    private static readonly Dictionary<string, int> SeverityOrder = new()
-    {
-        ["low"] = 0,
-        ["medium"] = 1,
-        ["high"] = 2,
-        ["critical"] = 3
-    };
-
     public NotificationRouter(
         IEnumerable<INotificationChannel> channels,
         INotificationRetryWorker retryWorker,
@@ -40,11 +33,10 @@ public class NotificationRouter : INotificationRouter
 
     public async Task RouteAsync(EnrichedAlert alert, CancellationToken ct = default)
     {
-        var alertSeverity = SeverityOrder.GetValueOrDefault(alert.Severity, 0);
+        var alertSeverity = SeverityMapping.ToOrder(alert.Severity);
 
         var matchingChannels = _channels
-            .Where(ch => alertSeverity >= SeverityOrder.GetValueOrDefault(
-                ch.MinimumSeverity, 0))
+            .Where(ch => alertSeverity >= SeverityMapping.ToOrder(ch.MinimumSeverity))
             .ToList();
 
         _logger.LogDebug(

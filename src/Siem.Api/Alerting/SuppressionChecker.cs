@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Siem.Api.Data;
-using Siem.Api.Data.Entities;
 
 namespace Siem.Api.Alerting;
 
@@ -11,8 +11,13 @@ namespace Siem.Api.Alerting;
 public class SuppressionChecker
 {
     private readonly SiemDbContext _db;
+    private readonly ILogger<SuppressionChecker> _logger;
 
-    public SuppressionChecker(SiemDbContext db) => _db = db;
+    public SuppressionChecker(SiemDbContext db, ILogger<SuppressionChecker> logger)
+    {
+        _db = db;
+        _logger = logger;
+    }
 
     /// <summary>
     /// Returns true if there is an active (non-expired) suppression matching
@@ -22,12 +27,29 @@ public class SuppressionChecker
     public virtual async Task<bool> IsSuppressedAsync(
         Guid ruleId, string agentId, CancellationToken ct = default)
     {
-        return await _db.Suppressions
-            .Where(s => s.ExpiresAt > DateTime.UtcNow)
-            .Where(s =>
-                (s.RuleId == ruleId && s.AgentId == null) ||
-                (s.RuleId == null && s.AgentId == agentId) ||
-                (s.RuleId == ruleId && s.AgentId == agentId))
-            .AnyAsync(ct);
+        try
+        {
+            return await _db.Suppressions
+                .Where(s => s.ExpiresAt > DateTime.UtcNow)
+                .Where(s =>
+                    (s.RuleId == ruleId && s.AgentId == null) ||
+                    (s.RuleId == null && s.AgentId == agentId) ||
+                    (s.RuleId == ruleId && s.AgentId == agentId))
+                .AnyAsync(ct);
+        }
+        catch (NpgsqlException ex)
+        {
+            _logger.LogWarning(ex,
+                "Failed to check suppressions for rule {RuleId} agent {AgentId}",
+                ruleId, agentId);
+            return false;
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex,
+                "Timeout checking suppressions for rule {RuleId} agent {AgentId}",
+                ruleId, agentId);
+            return false;
+        }
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.FSharp.Collections;
 using Microsoft.FSharp.Core;
 using Siem.Api.Data;
+using Siem.Api.Shared;
 using Siem.Rules.Core;
 
 namespace Siem.Api.Services;
@@ -46,7 +47,7 @@ public class RuleLoadingService
                     name:           dbRule.Name,
                     description:    dbRule.Description,
                     enabled:        dbRule.Enabled,
-                    severity:       MapSeverity(dbRule.Severity),
+                    severity:       SeverityMapping.FromString(dbRule.Severity),
                     condition:      condition,
                     evaluationType: MapEvaluationType(dbRule),
                     actions:        MapActions(dbRule.ActionsJson),
@@ -69,15 +70,6 @@ public class RuleLoadingService
 
         return fsharpRules;
     }
-
-    private static Severity MapSeverity(string s) => s.ToLowerInvariant() switch
-    {
-        "low"      => Severity.Low,
-        "medium"   => Severity.Medium,
-        "high"     => Severity.High,
-        "critical" => Severity.Critical,
-        _          => Severity.Medium
-    };
 
     private static EvaluationType MapEvaluationType(Data.Entities.RuleEntity rule)
     {

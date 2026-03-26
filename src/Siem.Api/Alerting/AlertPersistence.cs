@@ -53,12 +53,23 @@ public class AlertPersistence
             SequenceOrder = null // set for sequence rules
         });
 
-        await _db.SaveChangesAsync(ct);
+        await using var transaction = await _db.Database.BeginTransactionAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
 
-        // Update the session's alert tracking via stored procedure
-        await _db.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT update_session_alerts({evt.SessionId}, {alert.Severity})",
-            ct);
+            // Update the session's alert tracking via stored procedure
+            await _db.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT update_session_alerts({evt.SessionId}, {alert.Severity})",
+                ct);
+
+            await transaction.CommitAsync(ct);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
 
         _logger.LogDebug("Alert persisted: {AlertId} for rule {RuleId}",
             alertEntity.AlertId, alert.RuleId);
