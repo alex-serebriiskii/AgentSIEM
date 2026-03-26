@@ -15,13 +15,15 @@ public class RulesControllerTests : IDisposable
 {
     private readonly SiemDbContext _db;
     private readonly IRecompilationCoordinator _coordinator;
+    private readonly IRuleService _service;
     private readonly RulesController _controller;
 
     public RulesControllerTests()
     {
         _db = DbContextFactory.Create();
         _coordinator = Substitute.For<IRecompilationCoordinator>();
-        _controller = new RulesController(_db, _coordinator);
+        _service = new RuleService(_db, _coordinator);
+        _controller = new RulesController(_service);
     }
 
     public void Dispose() => _db.Dispose();
@@ -258,7 +260,6 @@ public class RulesControllerTests : IDisposable
     public async Task CreateRule_MissingConditionFields_ReturnsBadRequestWithDetail()
     {
         var request = ValidCreateRequest();
-        // Missing "operator" and "value" fields
         request.ConditionJson = TestEntityBuilders.ParseJson("""{"type":"field","field":"eventType"}""");
 
         var result = await _controller.CreateRule(request, CancellationToken.None);
@@ -288,7 +289,6 @@ public class RulesControllerTests : IDisposable
     public async Task CreateRule_MissingConditionsArray_ReturnsBadRequestWithDetail()
     {
         var request = ValidCreateRequest();
-        // "and" type requires a "conditions" array
         request.ConditionJson = TestEntityBuilders.ParseJson("""{"type":"and"}""");
 
         var result = await _controller.CreateRule(request, CancellationToken.None);

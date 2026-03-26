@@ -1,10 +1,10 @@
-using System.Text.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Siem.Api.Controllers;
 using Siem.Api.Data;
 using Siem.Api.Data.Entities;
 using Siem.Api.Models.Responses;
+using Siem.Api.Services;
 using Siem.Api.Tests.Controllers.Helpers;
 
 namespace Siem.Api.Tests.Controllers;
@@ -17,7 +17,8 @@ public class EventsControllerTests : IDisposable
     public EventsControllerTests()
     {
         _db = DbContextFactory.Create();
-        _controller = new EventsController(_db);
+        var service = new EventService(_db);
+        _controller = new EventsController(service);
     }
 
     public void Dispose() => _db.Dispose();
@@ -44,25 +45,10 @@ public class EventsControllerTests : IDisposable
         };
     }
 
-    private static (List<EventResponse> Data, int Page, int PageSize, int TotalCount, int TotalPages)
-        ExtractPaginatedResult(IActionResult result)
+    private static PaginatedResult<EventResponse> ExtractPaginatedResult(IActionResult result)
     {
         var ok = (OkObjectResult)result;
-        var json = JsonSerializer.Serialize(ok.Value);
-        var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-
-        var data = JsonSerializer.Deserialize<List<EventResponse>>(
-            root.GetProperty("data").GetRawText(),
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-
-        return (
-            data,
-            root.GetProperty("page").GetInt32(),
-            root.GetProperty("pageSize").GetInt32(),
-            root.GetProperty("totalCount").GetInt32(),
-            root.GetProperty("totalPages").GetInt32()
-        );
+        return (PaginatedResult<EventResponse>)ok.Value!;
     }
 
     // --- Default behavior ---
@@ -78,11 +64,11 @@ public class EventsControllerTests : IDisposable
 
         var result = await _controller.SearchEvents(ct: CancellationToken.None);
 
-        var (events, page, pageSize, totalCount, _) = ExtractPaginatedResult(result);
-        events.Should().HaveCount(1);
-        page.Should().Be(1);
-        pageSize.Should().Be(100);
-        totalCount.Should().Be(1);
+        var paginated = ExtractPaginatedResult(result);
+        paginated.Data.Should().HaveCount(1);
+        paginated.Page.Should().Be(1);
+        paginated.PageSize.Should().Be(100);
+        paginated.TotalCount.Should().Be(1);
     }
 
     [Test]
@@ -99,8 +85,8 @@ public class EventsControllerTests : IDisposable
             end: new DateTimeOffset(now, TimeSpan.Zero),
             ct: CancellationToken.None);
 
-        var (events, _, _, totalCount, _) = ExtractPaginatedResult(result);
-        totalCount.Should().Be(2);
+        var paginated = ExtractPaginatedResult(result);
+        paginated.TotalCount.Should().Be(2);
     }
 
     // --- Filters ---
@@ -114,9 +100,9 @@ public class EventsControllerTests : IDisposable
 
         var result = await _controller.SearchEvents(agent_id: "agent-A", ct: CancellationToken.None);
 
-        var (events, _, _, totalCount, _) = ExtractPaginatedResult(result);
-        totalCount.Should().Be(1);
-        events[0].AgentId.Should().Be("agent-A");
+        var paginated = ExtractPaginatedResult(result);
+        paginated.TotalCount.Should().Be(1);
+        paginated.Data[0].AgentId.Should().Be("agent-A");
     }
 
     [Test]
@@ -128,9 +114,9 @@ public class EventsControllerTests : IDisposable
 
         var result = await _controller.SearchEvents(event_type: "llm_call", ct: CancellationToken.None);
 
-        var (events, _, _, totalCount, _) = ExtractPaginatedResult(result);
-        totalCount.Should().Be(1);
-        events[0].EventType.Should().Be("llm_call");
+        var paginated = ExtractPaginatedResult(result);
+        paginated.TotalCount.Should().Be(1);
+        paginated.Data[0].EventType.Should().Be("llm_call");
     }
 
     [Test]
@@ -142,9 +128,9 @@ public class EventsControllerTests : IDisposable
 
         var result = await _controller.SearchEvents(session_id: "sess-A", ct: CancellationToken.None);
 
-        var (events, _, _, totalCount, _) = ExtractPaginatedResult(result);
-        totalCount.Should().Be(1);
-        events[0].SessionId.Should().Be("sess-A");
+        var paginated = ExtractPaginatedResult(result);
+        paginated.TotalCount.Should().Be(1);
+        paginated.Data[0].SessionId.Should().Be("sess-A");
     }
 
     [Test]
@@ -157,9 +143,9 @@ public class EventsControllerTests : IDisposable
 
         var result = await _controller.SearchEvents(tool_name: "web_search", ct: CancellationToken.None);
 
-        var (events, _, _, totalCount, _) = ExtractPaginatedResult(result);
-        totalCount.Should().Be(1);
-        events[0].ToolName.Should().Be("web_search");
+        var paginated = ExtractPaginatedResult(result);
+        paginated.TotalCount.Should().Be(1);
+        paginated.Data[0].ToolName.Should().Be("web_search");
     }
 
     // --- Pagination ---
@@ -173,12 +159,12 @@ public class EventsControllerTests : IDisposable
 
         var result = await _controller.SearchEvents(page: 2, pageSize: 2, ct: CancellationToken.None);
 
-        var (events, page, pageSize, totalCount, totalPages) = ExtractPaginatedResult(result);
-        events.Should().HaveCount(2);
-        page.Should().Be(2);
-        pageSize.Should().Be(2);
-        totalCount.Should().Be(5);
-        totalPages.Should().Be(3);
+        var paginated = ExtractPaginatedResult(result);
+        paginated.Data.Should().HaveCount(2);
+        paginated.Page.Should().Be(2);
+        paginated.PageSize.Should().Be(2);
+        paginated.TotalCount.Should().Be(5);
+        paginated.TotalPages.Should().Be(3);
     }
 
     [Test]
@@ -186,10 +172,10 @@ public class EventsControllerTests : IDisposable
     {
         var result = await _controller.SearchEvents(ct: CancellationToken.None);
 
-        var (events, _, _, totalCount, totalPages) = ExtractPaginatedResult(result);
-        events.Should().BeEmpty();
-        totalCount.Should().Be(0);
-        totalPages.Should().Be(0);
+        var paginated = ExtractPaginatedResult(result);
+        paginated.Data.Should().BeEmpty();
+        paginated.TotalCount.Should().Be(0);
+        paginated.TotalPages.Should().Be(0);
     }
 
     // --- Ordering ---
@@ -204,9 +190,9 @@ public class EventsControllerTests : IDisposable
 
         var result = await _controller.SearchEvents(ct: CancellationToken.None);
 
-        var (events, _, _, _, _) = ExtractPaginatedResult(result);
-        events.Should().HaveCount(2);
-        events[0].AgentId.Should().Be("newer");
-        events[1].AgentId.Should().Be("older");
+        var paginated = ExtractPaginatedResult(result);
+        paginated.Data.Should().HaveCount(2);
+        paginated.Data[0].AgentId.Should().Be("newer");
+        paginated.Data[1].AgentId.Should().Be("older");
     }
 }

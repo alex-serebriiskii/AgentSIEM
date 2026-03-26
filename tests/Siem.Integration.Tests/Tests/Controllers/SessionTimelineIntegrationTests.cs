@@ -28,7 +28,7 @@ public class SessionTimelineIntegrationTests
 
         await using var db = IntegrationTestFixture.CreateDbContext();
         await using var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
-        var controller = new SessionsController(db, dataSource);
+        var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource));
 
         var result = await controller.GetSessionTimeline(sessionId, ct: CancellationToken.None);
 
@@ -68,7 +68,7 @@ public class SessionTimelineIntegrationTests
     {
         await using var db = IntegrationTestFixture.CreateDbContext();
         await using var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
-        var controller = new SessionsController(db, dataSource);
+        var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource));
 
         var result = await controller.GetSessionTimeline("nonexistent-session", ct: CancellationToken.None);
 
@@ -84,7 +84,7 @@ public class SessionTimelineIntegrationTests
 
         await using var db = IntegrationTestFixture.CreateDbContext();
         await using var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
-        var controller = new SessionsController(db, dataSource);
+        var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource));
 
         var result = await controller.GetSessionTimeline(sessionId, limit: 5, ct: CancellationToken.None);
 
@@ -105,7 +105,7 @@ public class SessionTimelineIntegrationTests
 
         await using var db = IntegrationTestFixture.CreateDbContext();
         await using var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
-        var controller = new SessionsController(db, dataSource);
+        var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource));
 
         // Warm up
         await controller.GetSessionTimeline(sessionId, ct: CancellationToken.None);
