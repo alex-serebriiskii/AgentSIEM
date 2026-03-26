@@ -25,8 +25,14 @@ public class AlertsController : ControllerBase
         [FromQuery] string? status,
         [FromQuery] string? severity,
         [FromQuery] string? agent_id,
-        CancellationToken ct)
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken ct = default)
     {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 1;
+        if (pageSize > 200) pageSize = 200;
+
         var query = _db.Alerts.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(status))
@@ -38,11 +44,23 @@ public class AlertsController : ControllerBase
         if (!string.IsNullOrWhiteSpace(agent_id))
             query = query.Where(a => a.AgentId == agent_id);
 
+        var totalCount = await query.CountAsync(ct);
+        var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
         var alerts = await query
             .OrderByDescending(a => a.TriggeredAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(ct);
 
-        return Ok(alerts.Select(a => AlertResponse.FromEntity(a)));
+        return Ok(new
+        {
+            data = alerts.Select(a => AlertResponse.FromEntity(a)),
+            page,
+            pageSize,
+            totalCount,
+            totalPages
+        });
     }
 
     /// <summary>
