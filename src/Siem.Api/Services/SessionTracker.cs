@@ -32,11 +32,17 @@ public class SessionTracker : ISessionTracker
             cmd.Parameters.AddWithValue("timestamp", timestamp);
             await cmd.ExecuteNonQueryAsync(ct);
         }
-        catch (Exception ex)
+        catch (NpgsqlException ex)
         {
-            // Session tracking is best-effort — don't fail the pipeline
+            // Session tracking is best-effort — don't fail the pipeline for transient DB errors
             _logger.LogWarning(ex,
                 "Failed to upsert session {SessionId} for agent {AgentId}",
+                sessionId, agentId);
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex,
+                "Timeout upserting session {SessionId} for agent {AgentId}",
                 sessionId, agentId);
         }
     }
