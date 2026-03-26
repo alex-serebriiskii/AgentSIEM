@@ -8,10 +8,10 @@ namespace Siem.Api.Notifications;
 /// Channels whose MinimumSeverity is at or below the alert's severity
 /// are dispatched in parallel. Failed sends are queued to NotificationRetryWorker.
 /// </summary>
-public class NotificationRouter
+public class NotificationRouter : INotificationRouter
 {
     private readonly IReadOnlyList<INotificationChannel> _channels;
-    private readonly NotificationRetryWorker _retryWorker;
+    private readonly INotificationRetryWorker _retryWorker;
     private readonly ILogger<NotificationRouter> _logger;
 
     private static readonly Meter Meter = new("Siem.Notifications");
@@ -30,7 +30,7 @@ public class NotificationRouter
 
     public NotificationRouter(
         IEnumerable<INotificationChannel> channels,
-        NotificationRetryWorker retryWorker,
+        INotificationRetryWorker retryWorker,
         ILogger<NotificationRouter> logger)
     {
         _channels = channels.ToList();

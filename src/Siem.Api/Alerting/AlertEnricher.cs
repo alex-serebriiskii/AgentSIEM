@@ -22,7 +22,7 @@ public class AlertEnricher
         _logger = logger;
     }
 
-    public async Task<EnrichedAlert> EnrichAsync(
+    public virtual async Task<EnrichedAlert> EnrichAsync(
         EvaluationResult result,
         AgentEvent evt,
         CancellationToken ct = default)

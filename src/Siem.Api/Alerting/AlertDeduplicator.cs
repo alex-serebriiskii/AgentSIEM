@@ -7,7 +7,7 @@ namespace Siem.Api.Alerting;
 /// fingerprint was already created within a time window. Uses SET NX
 /// with TTL -- if the key already exists, it's a duplicate.
 /// </summary>
-public class AlertDeduplicator
+public class AlertDeduplicator : IAlertDeduplicator
 {
     private readonly IDatabase _redis;
     private readonly TimeSpan _window;

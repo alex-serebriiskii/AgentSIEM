@@ -15,8 +15,8 @@ public static class AlertingServiceExtensions
             ?? new AlertPipelineConfig());
 
         // Noise reduction (singleton -- uses Redis, no DbContext)
-        services.AddSingleton<AlertDeduplicator>();
-        services.AddSingleton<AlertThrottler>();
+        services.AddSingleton<IAlertDeduplicator, AlertDeduplicator>();
+        services.AddSingleton<IAlertThrottler, AlertThrottler>();
 
         // Scoped services (use DbContext per scope)
         services.AddScoped<SuppressionChecker>();
@@ -53,7 +53,7 @@ public static class AlertingServiceExtensions
         }
 
         // Notification router (singleton)
-        services.AddSingleton<NotificationRouter>();
+        services.AddSingleton<INotificationRouter, NotificationRouter>();
 
         // Pipeline (singleton -- creates its own scopes via IServiceScopeFactory)
         services.AddSingleton<IAlertPipeline, AlertPipeline>();
@@ -62,6 +62,8 @@ public static class AlertingServiceExtensions
         // Register as singleton first so NotificationRouter can resolve it,
         // then register the same instance as a hosted service.
         services.AddSingleton<NotificationRetryWorker>();
+        services.AddSingleton<INotificationRetryWorker>(sp =>
+            sp.GetRequiredService<NotificationRetryWorker>());
         services.AddHostedService<NotificationRetryWorker>(sp =>
             sp.GetRequiredService<NotificationRetryWorker>());
 

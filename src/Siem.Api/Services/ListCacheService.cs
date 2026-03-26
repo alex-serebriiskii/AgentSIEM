@@ -10,7 +10,7 @@ namespace Siem.Api.Services;
 /// The cache is refreshed as part of the recompilation pipeline to
 /// guarantee consistency with compiled rules.
 /// </summary>
-public class ListCacheService
+public class ListCacheService : IListCacheService
 {
     private volatile IReadOnlyDictionary<Guid, FrozenListSnapshot> _cache
         = new Dictionary<Guid, FrozenListSnapshot>();

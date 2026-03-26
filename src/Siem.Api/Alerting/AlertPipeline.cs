@@ -14,10 +14,10 @@ namespace Siem.Api.Alerting;
 /// </summary>
 public class AlertPipeline : IAlertPipeline
 {
-    private readonly AlertDeduplicator _dedup;
-    private readonly AlertThrottler _throttler;
+    private readonly IAlertDeduplicator _dedup;
+    private readonly IAlertThrottler _throttler;
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly NotificationRouter _router;
+    private readonly INotificationRouter _router;
     private readonly ILogger<AlertPipeline> _logger;
 
     private static readonly Meter Meter = new("Siem.Alerts");
@@ -31,12 +31,14 @@ public class AlertPipeline : IAlertPipeline
         Meter.CreateCounter<long>("siem.alerts.suppressed");
     private static readonly Counter<long> AlertsCreated =
         Meter.CreateCounter<long>("siem.alerts.created");
+    private static readonly Counter<long> NotificationRoutingErrors =
+        Meter.CreateCounter<long>("siem.alerts.notification_routing_errors");
 
     public AlertPipeline(
-        AlertDeduplicator dedup,
-        AlertThrottler throttler,
+        IAlertDeduplicator dedup,
+        IAlertThrottler throttler,
         IServiceScopeFactory scopeFactory,
-        NotificationRouter router,
+        INotificationRouter router,
         ILogger<AlertPipeline> logger)
     {
         _dedup = dedup;
@@ -101,9 +103,18 @@ public class AlertPipeline : IAlertPipeline
             alertId, result.RuleId, enrichedAlert.Severity, evt.AgentId);
 
         // Stage 6: Route notifications
-        // Fire-and-forget: notification failures don't block the pipeline.
-        // Failed deliveries are retried by the NotificationRetryWorker.
-        _ = _router.RouteAsync(enrichedAlert, ct);
+        // Per-channel failures are handled inside RouteAsync (retry queue).
+        // We await here so structural errors (e.g. router misconfiguration) surface.
+        try
+        {
+            await _router.RouteAsync(enrichedAlert, ct);
+        }
+        catch (Exception ex)
+        {
+            NotificationRoutingErrors.Add(1);
+            _logger.LogError(ex,
+                "Notification routing failed for alert {AlertId}", alertId);
+        }
     }
 
     private static string ComputeFingerprint(EvaluationResult result, AgentEvent evt)

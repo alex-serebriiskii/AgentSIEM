@@ -8,7 +8,7 @@ namespace Siem.Api.Services;
 /// Uses a volatile field for lock-free reads by background workers.
 /// The RecompilationCoordinator swaps in new engines atomically.
 /// </summary>
-public class CompiledRulesCache
+public class CompiledRulesCache : ICompiledRulesCache
 {
     private volatile Engine.RuleEngine _engine;
     private readonly Evaluator.IStateProvider _stateProvider;
@@ -44,7 +44,7 @@ public class CompiledRulesCache
     /// </summary>
     public void SwapEngine(
         FSharpList<Compiler.CompiledRule> compiledRules,
-        ListCacheService listCache)
+        IListCacheService listCache)
     {
         var newEngine = new Engine.RuleEngine(
             compiledRules: compiledRules,

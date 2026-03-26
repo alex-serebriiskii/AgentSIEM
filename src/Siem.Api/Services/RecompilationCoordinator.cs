@@ -34,8 +34,8 @@ public record InvalidationSignal(
 public class RecompilationCoordinator : BackgroundService, IRecompilationCoordinator
 {
     private readonly Channel<InvalidationSignal> _channel;
-    private readonly ListCacheService _listCache;
-    private readonly CompiledRulesCache _rulesCache;
+    private readonly IListCacheService _listCache;
+    private readonly ICompiledRulesCache _rulesCache;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<RecompilationCoordinator> _logger;
 
@@ -49,8 +49,8 @@ public class RecompilationCoordinator : BackgroundService, IRecompilationCoordin
     private CancellationTokenSource _compilationCompleted = new();
 
     public RecompilationCoordinator(
-        ListCacheService listCache,
-        CompiledRulesCache rulesCache,
+        IListCacheService listCache,
+        ICompiledRulesCache rulesCache,
         IServiceScopeFactory scopeFactory,
         ILogger<RecompilationCoordinator> logger)
     {

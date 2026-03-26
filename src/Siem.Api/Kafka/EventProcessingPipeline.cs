@@ -32,7 +32,7 @@ public enum ProcessingResult
 /// </summary>
 public class EventProcessingPipeline
 {
-    private readonly CompiledRulesCache _rulesCache;
+    private readonly ICompiledRulesCache _rulesCache;
     private readonly IEventNormalizer _normalizer;
     private readonly BatchEventWriter _batchWriter;
     private readonly IAlertPipeline _alertPipeline;
@@ -49,7 +49,7 @@ public class EventProcessingPipeline
         Meter.CreateHistogram<double>("siem.evaluate_ms");
 
     public EventProcessingPipeline(
-        CompiledRulesCache rulesCache,
+        ICompiledRulesCache rulesCache,
         IEventNormalizer normalizer,
         BatchEventWriter batchWriter,
         IAlertPipeline alertPipeline,
@@ -81,7 +81,7 @@ public class EventProcessingPipeline
 
         // Stage 3: Buffer for batch write to TimescaleDB
         // Events are always persisted, regardless of whether rules trigger.
-        _batchWriter.Enqueue(agentEvent);
+        await _batchWriter.EnqueueAsync(agentEvent);
 
         // Stage 3b: Track session (best-effort — does not block pipeline on failure)
         await _sessionTracker.TrackEventAsync(

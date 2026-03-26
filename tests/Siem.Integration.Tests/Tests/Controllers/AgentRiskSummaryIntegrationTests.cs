@@ -123,7 +123,7 @@ public class AgentRiskSummaryIntegrationTests
                 agentName: "RiskTestAgent",
                 toolName: $"tool-{i % 3}",
                 timestamp: baseTime.AddSeconds(i));
-            writer.Enqueue(evt);
+            await writer.EnqueueAsync(evt);
         }
         await writer.FlushAsync();
     }

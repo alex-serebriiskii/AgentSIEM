@@ -27,7 +27,7 @@ public class BatchEventWriterTests
             maxBatchSize: 10, maxFlushInterval: TimeSpan.FromMinutes(5));
 
         var evt = TestEventFactory.CreateToolInvocation();
-        writer.Enqueue(evt);
+        await writer.EnqueueAsync(evt);
         await writer.FlushAsync();
 
         await using var conn = await dataSource.OpenConnectionAsync();
@@ -52,7 +52,7 @@ public class BatchEventWriterTests
         {
             var evt = TestEventFactory.CreateToolInvocation();
             eventIds.Add(evt.EventId);
-            writer.Enqueue(evt);
+            await writer.EnqueueAsync(evt);
         }
 
         await writer.FlushAsync();
@@ -75,7 +75,7 @@ public class BatchEventWriterTests
 
         // CreateToolInvocation has several None optional fields (modelId, inputTokens, etc.)
         var evt = TestEventFactory.CreateToolInvocation();
-        writer.Enqueue(evt);
+        await writer.EnqueueAsync(evt);
         await writer.FlushAsync();
 
         await using var conn = await dataSource.OpenConnectionAsync();
@@ -103,7 +103,7 @@ public class BatchEventWriterTests
             ["custom_key"] = System.Text.Json.JsonDocument.Parse("\"custom_value\"").RootElement
         };
         var evt = TestEventFactory.CreateWithProperties(properties: props);
-        writer.Enqueue(evt);
+        await writer.EnqueueAsync(evt);
         await writer.FlushAsync();
 
         await using var conn = await dataSource.OpenConnectionAsync();
@@ -127,7 +127,7 @@ public class BatchEventWriterTests
 
         for (var i = 0; i < eventCount; i++)
         {
-            writer.Enqueue(TestEventFactory.CreateToolInvocation());
+            await writer.EnqueueAsync(TestEventFactory.CreateToolInvocation());
         }
 
         var sw = Stopwatch.StartNew();
@@ -156,7 +156,7 @@ public class BatchEventWriterTests
             maxBatchSize: 10, maxFlushInterval: TimeSpan.FromMinutes(5));
 
         var evt = TestEventFactory.CreateLlmCall(inputTokens: 150, outputTokens: 300);
-        writer.Enqueue(evt);
+        await writer.EnqueueAsync(evt);
         await writer.FlushAsync();
 
         await using var conn = await dataSource.OpenConnectionAsync();
