@@ -22,6 +22,11 @@ public static class KafkaServiceExtensions
             ?? new KafkaConsumerConfig();
 
         services.AddSingleton(kafkaConfig);
+
+        var batchWriterConfig = config.GetSection("BatchEventWriter").Get<BatchEventWriterConfig>()
+            ?? new BatchEventWriterConfig();
+        services.AddSingleton(batchWriterConfig);
+
         services.AddSingleton<IEventNormalizer, AgentEventNormalizer>();
         services.AddSingleton<BatchEventWriter>();
         services.AddSingleton<DeadLetterProducer>();

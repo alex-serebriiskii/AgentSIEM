@@ -25,6 +25,7 @@ public class BatchEventWriter : IAsyncDisposable
 
     private readonly int _maxBatchSize;
     private readonly TimeSpan _maxFlushInterval;
+    private readonly TimeSpan _flushLockTimeout;
 
     // Metrics
     private static readonly Meter Meter = new("Siem.Storage");
@@ -38,19 +39,19 @@ public class BatchEventWriter : IAsyncDisposable
     public BatchEventWriter(
         NpgsqlDataSource dataSource,
         ILogger<BatchEventWriter> logger,
-        int maxBatchSize = 500,
-        TimeSpan? maxFlushInterval = null)
+        BatchEventWriterConfig config)
     {
         _dataSource = dataSource;
         _logger = logger;
-        _maxBatchSize = maxBatchSize;
-        _maxFlushInterval = maxFlushInterval ?? TimeSpan.FromSeconds(2);
+        _maxBatchSize = config.MaxBatchSize;
+        _maxFlushInterval = TimeSpan.FromSeconds(config.MaxFlushIntervalSeconds);
+        _flushLockTimeout = TimeSpan.FromSeconds(config.FlushLockTimeoutSeconds);
 
         // BoundedChannel provides backpressure to the consumer when the DB
         // can't keep up. SingleReader = true enables optimizations since
         // only the flush loop reads from the channel.
         _buffer = Channel.CreateBounded<AgentEvent>(
-            new BoundedChannelOptions(maxBatchSize * 4)
+            new BoundedChannelOptions(config.MaxBatchSize * config.ChannelSizeMultiplier)
             {
                 FullMode = BoundedChannelFullMode.Wait,
                 SingleReader = true
@@ -78,7 +79,7 @@ public class BatchEventWriter : IAsyncDisposable
     /// </summary>
     public async Task FlushAsync()
     {
-        if (!await _flushLock.WaitAsync(TimeSpan.FromSeconds(30)))
+        if (!await _flushLock.WaitAsync(_flushLockTimeout))
         {
             _logger.LogWarning("Flush lock timeout — another flush is stuck");
             return;

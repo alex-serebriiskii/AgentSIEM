@@ -4,7 +4,7 @@ using Siem.Api.Models.Responses;
 
 namespace Siem.Api.Services;
 
-public class EventService(SiemDbContext db) : IEventService
+public class EventService(SiemDbContext db, PaginationConfig paginationConfig) : IEventService
 {
     public async Task<PaginatedResult<EventResponse>> SearchAsync(
         DateTimeOffset? start,
@@ -20,7 +20,7 @@ public class EventService(SiemDbContext db) : IEventService
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 1;
-        if (pageSize > 500) pageSize = 500;
+        if (pageSize > paginationConfig.EventsMaxPageSize) pageSize = paginationConfig.EventsMaxPageSize;
 
         var effectiveStart = start?.UtcDateTime ?? DateTime.UtcNow.AddHours(-1);
         var effectiveEnd = end?.UtcDateTime ?? DateTime.UtcNow;

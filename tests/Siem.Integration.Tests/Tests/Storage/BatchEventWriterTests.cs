@@ -24,7 +24,7 @@ public class BatchEventWriterTests
             IntegrationTestFixture.TimescaleConnectionString);
         await using var writer = new BatchEventWriter(
             dataSource, NullLogger<BatchEventWriter>.Instance,
-            maxBatchSize: 10, maxFlushInterval: TimeSpan.FromMinutes(5));
+            new BatchEventWriterConfig { MaxBatchSize = 10, MaxFlushIntervalSeconds = 300 });
 
         var evt = TestEventFactory.CreateToolInvocation();
         await writer.EnqueueAsync(evt);
@@ -45,7 +45,7 @@ public class BatchEventWriterTests
             IntegrationTestFixture.TimescaleConnectionString);
         await using var writer = new BatchEventWriter(
             dataSource, NullLogger<BatchEventWriter>.Instance,
-            maxBatchSize: 100, maxFlushInterval: TimeSpan.FromMinutes(5));
+            new BatchEventWriterConfig { MaxBatchSize = 100, MaxFlushIntervalSeconds = 300 });
 
         var eventIds = new List<Guid>();
         for (var i = 0; i < 50; i++)
@@ -71,7 +71,7 @@ public class BatchEventWriterTests
             IntegrationTestFixture.TimescaleConnectionString);
         await using var writer = new BatchEventWriter(
             dataSource, NullLogger<BatchEventWriter>.Instance,
-            maxBatchSize: 10, maxFlushInterval: TimeSpan.FromMinutes(5));
+            new BatchEventWriterConfig { MaxBatchSize = 10, MaxFlushIntervalSeconds = 300 });
 
         // CreateToolInvocation has several None optional fields (modelId, inputTokens, etc.)
         var evt = TestEventFactory.CreateToolInvocation();
@@ -96,7 +96,7 @@ public class BatchEventWriterTests
             IntegrationTestFixture.TimescaleConnectionString);
         await using var writer = new BatchEventWriter(
             dataSource, NullLogger<BatchEventWriter>.Instance,
-            maxBatchSize: 10, maxFlushInterval: TimeSpan.FromMinutes(5));
+            new BatchEventWriterConfig { MaxBatchSize = 10, MaxFlushIntervalSeconds = 300 });
 
         var props = new Dictionary<string, System.Text.Json.JsonElement>
         {
@@ -123,7 +123,7 @@ public class BatchEventWriterTests
             IntegrationTestFixture.TimescaleConnectionString);
         await using var writer = new BatchEventWriter(
             dataSource, NullLogger<BatchEventWriter>.Instance,
-            maxBatchSize: eventCount, maxFlushInterval: TimeSpan.FromMinutes(5));
+            new BatchEventWriterConfig { MaxBatchSize = eventCount, MaxFlushIntervalSeconds = 300 });
 
         for (var i = 0; i < eventCount; i++)
         {
@@ -153,7 +153,7 @@ public class BatchEventWriterTests
             IntegrationTestFixture.TimescaleConnectionString);
         await using var writer = new BatchEventWriter(
             dataSource, NullLogger<BatchEventWriter>.Instance,
-            maxBatchSize: 10, maxFlushInterval: TimeSpan.FromMinutes(5));
+            new BatchEventWriterConfig { MaxBatchSize = 10, MaxFlushIntervalSeconds = 300 });
 
         var evt = TestEventFactory.CreateLlmCall(inputTokens: 150, outputTokens: 300);
         await writer.EnqueueAsync(evt);

@@ -59,6 +59,10 @@ public static class AlertingServiceExtensions
         services.AddSingleton<IAlertPipeline, AlertPipeline>();
 
         // Notification retry infrastructure
+        var retryConfig = config.GetSection("NotificationRetry").Get<NotificationRetryConfig>()
+            ?? new NotificationRetryConfig();
+        services.AddSingleton(retryConfig);
+
         // Register as singleton first so NotificationRouter can resolve it,
         // then register the same instance as a hosted service.
         services.AddSingleton<NotificationRetryWorker>();

@@ -39,11 +39,18 @@ builder.Services.AddSingleton<Evaluator.IStateProvider>(sp =>
 builder.Services.AddSingleton<CompiledRulesCache>();
 builder.Services.AddSingleton<ICompiledRulesCache>(sp =>
     sp.GetRequiredService<CompiledRulesCache>());
+var recompilationConfig = configuration.GetSection("Recompilation").Get<RecompilationConfig>()
+    ?? new RecompilationConfig();
+builder.Services.AddSingleton(recompilationConfig);
 builder.Services.AddSingleton<RecompilationCoordinator>();
 builder.Services.AddSingleton<IRecompilationCoordinator>(sp =>
     sp.GetRequiredService<RecompilationCoordinator>());
 builder.Services.AddHostedService(sp =>
     sp.GetRequiredService<RecompilationCoordinator>());
+
+var paginationConfig = configuration.GetSection("Pagination").Get<PaginationConfig>()
+    ?? new PaginationConfig();
+builder.Services.AddSingleton(paginationConfig);
 
 // ---------------------------------------------------------------------------
 // API services (controller backing)

@@ -156,7 +156,7 @@ public class DashboardIntegrationTests
             IntegrationTestFixture.TimescaleConnectionString);
         await using var writer = new BatchEventWriter(
             dataSource, NullLogger<BatchEventWriter>.Instance,
-            maxBatchSize: count + 10, maxFlushInterval: TimeSpan.FromMinutes(5));
+            new BatchEventWriterConfig { MaxBatchSize = count + 10, MaxFlushIntervalSeconds = 300 });
 
         var baseTime = DateTime.UtcNow.AddHours(-hoursAgo).AddMinutes(-count);
         for (int i = 0; i < count; i++)

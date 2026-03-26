@@ -419,8 +419,7 @@ public class EventProcessingPipelineTests
         var batchWriter = new BatchEventWriter(
             dataSource,
             NullLogger<BatchEventWriter>.Instance,
-            maxBatchSize: 100,
-            maxFlushInterval: TimeSpan.FromMinutes(5));
+            new BatchEventWriterConfig { MaxBatchSize = 100, MaxFlushIntervalSeconds = 300 });
 
         var normalizer = new AgentEventNormalizer(
             NullLogger<AgentEventNormalizer>.Instance);
@@ -445,8 +444,7 @@ public class EventProcessingPipelineTests
         var batchWriter = new BatchEventWriter(
             dataSource,
             NullLogger<BatchEventWriter>.Instance,
-            maxBatchSize: 100,
-            maxFlushInterval: TimeSpan.FromMinutes(5));
+            new BatchEventWriterConfig { MaxBatchSize = 100, MaxFlushIntervalSeconds = 300 });
 
         var normalizer = new AgentEventNormalizer(
             NullLogger<AgentEventNormalizer>.Instance);

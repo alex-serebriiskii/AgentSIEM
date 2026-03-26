@@ -10,11 +10,17 @@ namespace Siem.Api.Kafka;
 /// </summary>
 public class ConsumerHealthCheck : IHealthCheck
 {
+    private readonly KafkaConsumerConfig _config;
     private DateTime _lastConsumeTime = DateTime.MinValue;
     private DateTime _lastErrorTime = DateTime.MinValue;
     private int _recentErrorCount;
     private List<TopicPartitionOffset> _assignedPartitions = new();
     private readonly object _lock = new();
+
+    public ConsumerHealthCheck(KafkaConsumerConfig config)
+    {
+        _config = config;
+    }
 
     public void RecordConsume()
     {
@@ -52,8 +58,8 @@ public class ConsumerHealthCheck : IHealthCheck
             var timeSinceConsume = DateTime.UtcNow - _lastConsumeTime;
             var isHealthy =
                 _lastConsumeTime != DateTime.MinValue &&
-                timeSinceConsume < TimeSpan.FromMinutes(5) &&
-                _recentErrorCount < 50;
+                timeSinceConsume < TimeSpan.FromMinutes(_config.HealthStalenessMinutes) &&
+                _recentErrorCount < _config.HealthErrorThreshold;
 
             return new ConsumerHealthStatus
             {
@@ -88,7 +94,7 @@ public class ConsumerHealthCheck : IHealthCheck
                 "Kafka consumer is healthy", data));
         }
 
-        var description = status.RecentErrorCount >= 50
+        var description = status.RecentErrorCount >= _config.HealthErrorThreshold
             ? $"Too many recent errors: {status.RecentErrorCount}"
             : $"No messages consumed for {status.TimeSinceLastConsume}";
 

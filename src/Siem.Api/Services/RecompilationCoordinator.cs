@@ -38,12 +38,11 @@ public class RecompilationCoordinator : BackgroundService, IRecompilationCoordin
     private readonly ICompiledRulesCache _rulesCache;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<RecompilationCoordinator> _logger;
+    private readonly RecompilationConfig _config;
 
-    // Debounce window: wait this long after the last signal before compiling
-    private static readonly TimeSpan DebounceWindow = TimeSpan.FromMilliseconds(500);
-
-    // If compilation hasn't happened in this long, force one (safety net)
-    private static readonly TimeSpan MaxDebounceDelay = TimeSpan.FromSeconds(5);
+    // Debounce timings read from config
+    private readonly TimeSpan _debounceWindow;
+    private readonly TimeSpan _maxDebounceDelay;
 
     // Event that fires after each successful compilation
     private CancellationTokenSource _compilationCompleted = new();
@@ -52,17 +51,21 @@ public class RecompilationCoordinator : BackgroundService, IRecompilationCoordin
         IListCacheService listCache,
         ICompiledRulesCache rulesCache,
         IServiceScopeFactory scopeFactory,
-        ILogger<RecompilationCoordinator> logger)
+        ILogger<RecompilationCoordinator> logger,
+        RecompilationConfig config)
     {
         _listCache = listCache;
         _rulesCache = rulesCache;
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _config = config;
+        _debounceWindow = TimeSpan.FromMilliseconds(config.DebounceWindowMs);
+        _maxDebounceDelay = TimeSpan.FromSeconds(config.MaxDebounceDelaySeconds);
 
         // Bounded channel: if signals pile up faster than we can process,
         // drop the oldest -- we'll reload everything anyway.
         _channel = Channel.CreateBounded<InvalidationSignal>(
-            new BoundedChannelOptions(100)
+            new BoundedChannelOptions(config.ChannelCapacity)
             {
                 FullMode = BoundedChannelFullMode.DropOldest,
                 SingleReader = true
@@ -101,7 +104,7 @@ public class RecompilationCoordinator : BackgroundService, IRecompilationCoordin
         {
             // Wait for compilation with a reasonable timeout
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeoutCts.CancelAfter(TimeSpan.FromSeconds(30));
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(_config.SignalTimeoutSeconds));
 
             await tcs.Task.WaitAsync(timeoutCts.Token);
         }
@@ -131,11 +134,11 @@ public class RecompilationCoordinator : BackgroundService, IRecompilationCoordin
 
                 // Debounce: keep reading signals until the window expires
                 // or we hit the maximum delay
-                while (DateTime.UtcNow - debounceStart < MaxDebounceDelay)
+                while (DateTime.UtcNow - debounceStart < _maxDebounceDelay)
                 {
                     using var delayCts = CancellationTokenSource
                         .CreateLinkedTokenSource(stoppingToken);
-                    delayCts.CancelAfter(DebounceWindow);
+                    delayCts.CancelAfter(_debounceWindow);
 
                     try
                     {
@@ -168,7 +171,7 @@ public class RecompilationCoordinator : BackgroundService, IRecompilationCoordin
 
                 // Don't crash the loop. The old engine is still valid.
                 // Wait a bit before retrying to avoid tight failure loops.
-                await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
+                await Task.Delay(TimeSpan.FromSeconds(_config.ErrorRecoveryDelaySeconds), stoppingToken);
             }
         }
     }

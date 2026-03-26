@@ -11,24 +11,23 @@ public class NotificationRetryWorker : BackgroundService, INotificationRetryWork
 {
     private readonly Channel<PendingNotification> _channel;
     private readonly ILogger<NotificationRetryWorker> _logger;
+    private readonly int _maxAttempts;
+    private readonly TimeSpan[] _backoffIntervals;
 
-    private const int MaxAttempts = 3;
-
-    private static readonly TimeSpan[] BackoffIntervals =
-    [
-        TimeSpan.FromSeconds(30),
-        TimeSpan.FromMinutes(2),
-        TimeSpan.FromMinutes(10)
-    ];
-
-    public NotificationRetryWorker(ILogger<NotificationRetryWorker> logger)
+    public NotificationRetryWorker(
+        ILogger<NotificationRetryWorker> logger,
+        NotificationRetryConfig config)
     {
         _channel = System.Threading.Channels.Channel.CreateBounded<PendingNotification>(
-            new BoundedChannelOptions(1000)
+            new BoundedChannelOptions(config.ChannelCapacity)
             {
                 FullMode = BoundedChannelFullMode.DropOldest
             });
         _logger = logger;
+        _maxAttempts = config.MaxAttempts;
+        _backoffIntervals = config.BackoffIntervalsSeconds
+            .Select(s => TimeSpan.FromSeconds(s))
+            .ToArray();
     }
 
     /// <summary>
@@ -76,7 +75,7 @@ public class NotificationRetryWorker : BackgroundService, INotificationRetryWork
             {
                 var nextAttempt = pending.AttemptCount + 1;
 
-                if (nextAttempt >= MaxAttempts)
+                if (nextAttempt >= _maxAttempts)
                 {
                     _logger.LogWarning(
                         "Notification permanently failed after {Attempts} attempts: " +
@@ -87,8 +86,8 @@ public class NotificationRetryWorker : BackgroundService, INotificationRetryWork
                 }
 
                 // Exponential backoff
-                var backoff = BackoffIntervals[
-                    Math.Min(nextAttempt - 1, BackoffIntervals.Length - 1)];
+                var backoff = _backoffIntervals[
+                    Math.Min(nextAttempt - 1, _backoffIntervals.Length - 1)];
 
                 var retry = pending with
                 {
