@@ -64,7 +64,7 @@ public class WebhookNotificationChannel : INotificationChannel
             }
 
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(TimeSpan.FromSeconds(10));
+            cts.CancelAfter(TimeSpan.FromSeconds(_config.TimeoutSeconds));
 
             var response = await httpClient.SendAsync(request, cts.Token);
             response.EnsureSuccessStatusCode();

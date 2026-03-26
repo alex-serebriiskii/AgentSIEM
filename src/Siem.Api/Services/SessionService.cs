@@ -5,7 +5,7 @@ using Siem.Api.Models.Responses;
 
 namespace Siem.Api.Services;
 
-public class SessionService(SiemDbContext db, NpgsqlDataSource dataSource) : ISessionService
+public class SessionService(SiemDbContext db, NpgsqlDataSource dataSource, PaginationConfig paginationConfig) : ISessionService
 {
     public async Task<ServiceResult<IReadOnlyList<SessionResponse>>> ListAsync(
         string? agentId, bool? hasAlerts, CancellationToken ct)
@@ -39,7 +39,7 @@ public class SessionService(SiemDbContext db, NpgsqlDataSource dataSource) : ISe
         string id, int limit, CancellationToken ct)
     {
         if (limit < 1) limit = 1;
-        if (limit > 5000) limit = 5000;
+        if (limit > paginationConfig.SessionTimelineMaxLimit) limit = paginationConfig.SessionTimelineMaxLimit;
 
         var session = await db.AgentSessions.FindAsync([id], ct);
         if (session == null)

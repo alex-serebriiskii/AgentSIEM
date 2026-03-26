@@ -35,7 +35,7 @@ public class EventSearchIntegrationTests
         await SeedEvents("agent-1", 3, hoursAgo: 48);
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new EventsController(new Siem.Api.Services.EventService(db));
+        var controller = new EventsController(new Siem.Api.Services.EventService(db, new Siem.Api.Services.PaginationConfig()));
 
         var result = await controller.SearchEvents(
             start: new DateTimeOffset(now.AddHours(-2), TimeSpan.Zero),
@@ -53,7 +53,7 @@ public class EventSearchIntegrationTests
         await SeedEvents("agent-B", 2, hoursAgo: 0);
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new EventsController(new Siem.Api.Services.EventService(db));
+        var controller = new EventsController(new Siem.Api.Services.EventService(db, new Siem.Api.Services.PaginationConfig()));
 
         var result = await controller.SearchEvents(
             start: new DateTimeOffset(DateTime.UtcNow.AddHours(-1), TimeSpan.Zero),
@@ -72,7 +72,7 @@ public class EventSearchIntegrationTests
         await SeedLlmEvents("agent-1", 3, hoursAgo: 0);
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new EventsController(new Siem.Api.Services.EventService(db));
+        var controller = new EventsController(new Siem.Api.Services.EventService(db, new Siem.Api.Services.PaginationConfig()));
 
         var result = await controller.SearchEvents(
             start: new DateTimeOffset(DateTime.UtcNow.AddHours(-1), TimeSpan.Zero),
@@ -91,7 +91,7 @@ public class EventSearchIntegrationTests
         await SeedEventsWithTool("agent-1", "file_read", 2, hoursAgo: 0);
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new EventsController(new Siem.Api.Services.EventService(db));
+        var controller = new EventsController(new Siem.Api.Services.EventService(db, new Siem.Api.Services.PaginationConfig()));
 
         var result = await controller.SearchEvents(
             start: new DateTimeOffset(DateTime.UtcNow.AddHours(-1), TimeSpan.Zero),
@@ -111,7 +111,7 @@ public class EventSearchIntegrationTests
         await SeedEventsWithProperties("agent-1", """{"documentId":"public-456"}""", 3, hoursAgo: 0);
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new EventsController(new Siem.Api.Services.EventService(db));
+        var controller = new EventsController(new Siem.Api.Services.EventService(db, new Siem.Api.Services.PaginationConfig()));
 
         var result = await controller.SearchEvents(
             start: new DateTimeOffset(DateTime.UtcNow.AddHours(-1), TimeSpan.Zero),
@@ -128,7 +128,7 @@ public class EventSearchIntegrationTests
         await SeedEvents("agent-1", 10, hoursAgo: 0);
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new EventsController(new Siem.Api.Services.EventService(db));
+        var controller = new EventsController(new Siem.Api.Services.EventService(db, new Siem.Api.Services.PaginationConfig()));
 
         var result = await controller.SearchEvents(
             start: new DateTimeOffset(DateTime.UtcNow.AddHours(-1), TimeSpan.Zero),
@@ -152,7 +152,7 @@ public class EventSearchIntegrationTests
         await SeedEvents("agent-1", 5, hoursAgo: 0);
 
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var controller = new EventsController(new Siem.Api.Services.EventService(db));
+        var controller = new EventsController(new Siem.Api.Services.EventService(db, new Siem.Api.Services.PaginationConfig()));
 
         var result = await controller.SearchEvents(
             start: new DateTimeOffset(DateTime.UtcNow.AddHours(-1), TimeSpan.Zero),
@@ -176,7 +176,7 @@ public class EventSearchIntegrationTests
             IntegrationTestFixture.TimescaleConnectionString);
         await using var writer = new BatchEventWriter(
             dataSource, NullLogger<BatchEventWriter>.Instance,
-            maxBatchSize: count + 10, maxFlushInterval: TimeSpan.FromMinutes(5));
+            new BatchEventWriterConfig { MaxBatchSize = count + 10, MaxFlushIntervalSeconds = 300 });
 
         var baseTime = DateTime.UtcNow.AddHours(-hoursAgo).AddMinutes(-count);
         for (int i = 0; i < count; i++)
@@ -196,7 +196,7 @@ public class EventSearchIntegrationTests
             IntegrationTestFixture.TimescaleConnectionString);
         await using var writer = new BatchEventWriter(
             dataSource, NullLogger<BatchEventWriter>.Instance,
-            maxBatchSize: count + 10, maxFlushInterval: TimeSpan.FromMinutes(5));
+            new BatchEventWriterConfig { MaxBatchSize = count + 10, MaxFlushIntervalSeconds = 300 });
 
         var baseTime = DateTime.UtcNow.AddHours(-hoursAgo).AddMinutes(-count);
         for (int i = 0; i < count; i++)

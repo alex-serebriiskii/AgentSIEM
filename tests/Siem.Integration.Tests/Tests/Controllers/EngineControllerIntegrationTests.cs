@@ -188,7 +188,8 @@ public class EngineControllerIntegrationTests
             listCache,
             rulesCache,
             scopeFactory,
-            NullLogger<RecompilationCoordinator>.Instance);
+            NullLogger<RecompilationCoordinator>.Instance,
+            new RecompilationConfig());
 
         var controller = new EngineController(rulesCache, coordinator);
 

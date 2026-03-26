@@ -35,4 +35,19 @@ public class KafkaConsumerConfig
 
     /// <summary>Max interval (ms) between polls before the broker kicks the consumer.</summary>
     public int MaxPollIntervalMs { get; set; } = 300_000;
+
+    /// <summary>Timeout in milliseconds for each Consume() call.</summary>
+    public int ConsumeTimeoutMs { get; set; } = 500;
+
+    /// <summary>Delay in seconds before retrying when the topic is not found.</summary>
+    public int TopicNotFoundRetrySeconds { get; set; } = 10;
+
+    /// <summary>Delay in seconds after an unexpected error in the consumer loop.</summary>
+    public int ErrorBackoffSeconds { get; set; } = 1;
+
+    /// <summary>Time in minutes since last consume before health check reports unhealthy.</summary>
+    public int HealthStalenessMinutes { get; set; } = 5;
+
+    /// <summary>Error count threshold above which health check reports unhealthy.</summary>
+    public int HealthErrorThreshold { get; set; } = 50;
 }

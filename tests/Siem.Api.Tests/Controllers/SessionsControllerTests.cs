@@ -18,7 +18,7 @@ public class SessionsControllerTests : IDisposable
         _db = DbContextFactory.Create();
         // NpgsqlDataSource is null — timeline endpoint requires real PostgreSQL
         // and is covered by integration tests. EF-only endpoints work fine.
-        var service = new SessionService(_db, null!);
+        var service = new SessionService(_db, null!, new PaginationConfig());
         _controller = new SessionsController(service);
     }
 

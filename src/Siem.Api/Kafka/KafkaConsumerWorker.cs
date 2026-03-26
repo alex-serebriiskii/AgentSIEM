@@ -113,7 +113,7 @@ public class KafkaConsumerWorker : BackgroundService
             try
             {
                 var consumeResult = consumer.Consume(
-                    TimeSpan.FromMilliseconds(500));
+                    TimeSpan.FromMilliseconds(_config.ConsumeTimeoutMs));
 
                 if (consumeResult == null)
                 {
@@ -154,7 +154,7 @@ public class KafkaConsumerWorker : BackgroundService
             {
                 _logger.LogError("Topic {Topic} not found — waiting for creation",
                     _config.Topic);
-                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+                await Task.Delay(TimeSpan.FromSeconds(_config.TopicNotFoundRetrySeconds), stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -166,7 +166,7 @@ public class KafkaConsumerWorker : BackgroundService
                 _health.RecordError(ex);
 
                 // Brief pause to avoid tight failure loops
-                await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
+                await Task.Delay(TimeSpan.FromSeconds(_config.ErrorBackoffSeconds), stoppingToken);
             }
         }
 

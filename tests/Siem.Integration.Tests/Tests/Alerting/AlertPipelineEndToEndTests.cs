@@ -53,7 +53,7 @@ public class AlertPipelineEndToEndTests
 
         var dedup = new AlertDeduplicator(IntegrationTestFixture.RedisMultiplexer, config);
         var throttler = new AlertThrottler(IntegrationTestFixture.RedisMultiplexer, config);
-        var retryWorker = new NotificationRetryWorker(NullLogger<NotificationRetryWorker>.Instance);
+        var retryWorker = new NotificationRetryWorker(NullLogger<NotificationRetryWorker>.Instance, new NotificationRetryConfig());
         var router = new NotificationRouter(
             channels ?? [],
             retryWorker,
@@ -274,7 +274,7 @@ public class AlertPipelineEndToEndTests
         // Verify the retry worker picks up queued notifications and delivers them.
         // We enqueue a notification with immediate NextAttemptAt to a recording channel.
         var recordingChannel = new RecordingNotificationChannel("retry-test", "low");
-        var retryWorker = new NotificationRetryWorker(NullLogger<NotificationRetryWorker>.Instance);
+        var retryWorker = new NotificationRetryWorker(NullLogger<NotificationRetryWorker>.Instance, new NotificationRetryConfig());
 
         using var cts = new CancellationTokenSource();
         var workerTask = retryWorker.StartAsync(cts.Token);
@@ -321,7 +321,7 @@ public class AlertPipelineEndToEndTests
         // skip them. The re-enqueueing behavior uses 30s+ backoff intervals
         // which aren't practical to wait for in a test.
         var failOnceChannel = new FailOnceNotificationChannel();
-        var retryWorker = new NotificationRetryWorker(NullLogger<NotificationRetryWorker>.Instance);
+        var retryWorker = new NotificationRetryWorker(NullLogger<NotificationRetryWorker>.Instance, new NotificationRetryConfig());
 
         using var cts = new CancellationTokenSource();
         _ = retryWorker.StartAsync(cts.Token);

@@ -28,7 +28,7 @@ public class SessionTimelineIntegrationTests
 
         await using var db = IntegrationTestFixture.CreateDbContext();
         await using var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
-        var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource));
+        var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource, new Siem.Api.Services.PaginationConfig()));
 
         var result = await controller.GetSessionTimeline(sessionId, ct: CancellationToken.None);
 
@@ -68,7 +68,7 @@ public class SessionTimelineIntegrationTests
     {
         await using var db = IntegrationTestFixture.CreateDbContext();
         await using var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
-        var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource));
+        var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource, new Siem.Api.Services.PaginationConfig()));
 
         var result = await controller.GetSessionTimeline("nonexistent-session", ct: CancellationToken.None);
 
@@ -84,7 +84,7 @@ public class SessionTimelineIntegrationTests
 
         await using var db = IntegrationTestFixture.CreateDbContext();
         await using var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
-        var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource));
+        var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource, new Siem.Api.Services.PaginationConfig()));
 
         var result = await controller.GetSessionTimeline(sessionId, limit: 5, ct: CancellationToken.None);
 
@@ -105,7 +105,7 @@ public class SessionTimelineIntegrationTests
 
         await using var db = IntegrationTestFixture.CreateDbContext();
         await using var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
-        var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource));
+        var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource, new Siem.Api.Services.PaginationConfig()));
 
         // Warm up
         await controller.GetSessionTimeline(sessionId, ct: CancellationToken.None);
@@ -126,7 +126,7 @@ public class SessionTimelineIntegrationTests
             IntegrationTestFixture.TimescaleConnectionString);
         await using var writer = new BatchEventWriter(
             dataSource, NullLogger<BatchEventWriter>.Instance,
-            maxBatchSize: count + 10, maxFlushInterval: TimeSpan.FromMinutes(5));
+            new BatchEventWriterConfig { MaxBatchSize = count + 10, MaxFlushIntervalSeconds = 300 });
 
         var baseTime = DateTime.UtcNow.AddMinutes(-count);
         for (int i = 0; i < count; i++)

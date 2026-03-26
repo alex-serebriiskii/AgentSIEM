@@ -17,7 +17,7 @@ public class EventsControllerTests : IDisposable
     public EventsControllerTests()
     {
         _db = DbContextFactory.Create();
-        var service = new EventService(_db);
+        var service = new EventService(_db, new PaginationConfig());
         _controller = new EventsController(service);
     }
 

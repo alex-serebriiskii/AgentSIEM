@@ -311,7 +311,8 @@ public class RecompilationCoordinatorTests
             listCache,
             rulesCache,
             scopeFactory,
-            NullLogger<RecompilationCoordinator>.Instance);
+            NullLogger<RecompilationCoordinator>.Instance,
+            new RecompilationConfig());
 
         return (coordinator, rulesCache, listCache);
     }
