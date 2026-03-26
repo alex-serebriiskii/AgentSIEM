@@ -1,4 +1,5 @@
 using Siem.Api.Normalization;
+using Siem.Api.Services;
 using Siem.Api.Storage;
 
 namespace Siem.Api.Kafka;
@@ -25,6 +26,7 @@ public static class KafkaServiceExtensions
         services.AddSingleton<BatchEventWriter>();
         services.AddSingleton<DeadLetterProducer>();
         services.AddSingleton<ConsumerHealthCheck>();
+        services.AddSingleton<ISessionTracker, SessionTracker>();
         services.AddSingleton<EventProcessingPipeline>();
         services.AddHostedService<KafkaConsumerWorker>();
 

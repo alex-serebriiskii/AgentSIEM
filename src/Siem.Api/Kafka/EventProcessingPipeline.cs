@@ -36,6 +36,7 @@ public class EventProcessingPipeline
     private readonly IEventNormalizer _normalizer;
     private readonly BatchEventWriter _batchWriter;
     private readonly IAlertPipeline _alertPipeline;
+    private readonly ISessionTracker _sessionTracker;
     private readonly ILogger<EventProcessingPipeline> _logger;
 
     // Metrics
@@ -52,12 +53,14 @@ public class EventProcessingPipeline
         IEventNormalizer normalizer,
         BatchEventWriter batchWriter,
         IAlertPipeline alertPipeline,
+        ISessionTracker sessionTracker,
         ILogger<EventProcessingPipeline> logger)
     {
         _rulesCache = rulesCache;
         _normalizer = normalizer;
         _batchWriter = batchWriter;
         _alertPipeline = alertPipeline;
+        _sessionTracker = sessionTracker;
         _logger = logger;
     }
 
@@ -79,6 +82,11 @@ public class EventProcessingPipeline
         // Stage 3: Buffer for batch write to TimescaleDB
         // Events are always persisted, regardless of whether rules trigger.
         _batchWriter.Enqueue(agentEvent);
+
+        // Stage 3b: Track session (best-effort — does not block pipeline on failure)
+        await _sessionTracker.TrackEventAsync(
+            agentEvent.SessionId, agentEvent.AgentId, agentEvent.AgentName,
+            agentEvent.Timestamp, ct);
 
         // Stage 4: Evaluate rules
         sw.Restart();

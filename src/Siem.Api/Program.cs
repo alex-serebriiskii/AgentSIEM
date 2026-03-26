@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Prometheus;
 using Siem.Api.Alerting;
 using Siem.Api.Data;
 using Siem.Api.Hubs;
@@ -51,6 +52,25 @@ builder.Services.AddKafkaPipeline(configuration);
 builder.Services.AddAlertPipeline(configuration);
 
 // ---------------------------------------------------------------------------
+// Background services
+// ---------------------------------------------------------------------------
+builder.Services.Configure<ToolAnomalyConfig>(
+    configuration.GetSection("ToolAnomalyDetector"));
+builder.Services.AddHostedService<ToolAnomalyDetector>();
+
+// ---------------------------------------------------------------------------
+// Metrics / Prometheus
+// ---------------------------------------------------------------------------
+// prometheus-net bridges System.Diagnostics.Metrics to Prometheus format.
+// All Meter instances across the codebase (Siem.Pipeline, Siem.Alerts,
+// Siem.Kafka, Siem.Storage, Siem.Notifications, Siem.Anomaly) are automatically
+// exported at /metrics via the MeterAdapter.
+Metrics.SuppressDefaultMetrics(new SuppressDefaultMetricOptions
+{
+    SuppressProcessMetrics = false
+});
+
+// ---------------------------------------------------------------------------
 // Web / API infrastructure
 // ---------------------------------------------------------------------------
 builder.Services.AddSignalR();
@@ -79,8 +99,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseHttpMetrics(); // Track HTTP request duration/count per endpoint
 app.MapControllers();
 app.MapHub<AlertHub>("/hubs/alerts");
 app.MapHealthChecks("/health");
+app.MapMetrics(); // Prometheus scraping endpoint at /metrics
 
 app.Run();

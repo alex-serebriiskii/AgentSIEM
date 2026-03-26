@@ -428,12 +428,14 @@ public class EventProcessingPipelineTests
         var stateProvider = new RedisStateProvider(IntegrationTestFixture.RedisMultiplexer);
         var rulesCache = new CompiledRulesCache(stateProvider);
         var alertPipeline = Substitute.For<IAlertPipeline>();
+        var sessionTracker = Substitute.For<ISessionTracker>();
 
         return new EventProcessingPipeline(
             rulesCache,
             normalizer,
             batchWriter,
             alertPipeline,
+            sessionTracker,
             NullLogger<EventProcessingPipeline>.Instance);
     }
 
@@ -466,12 +468,14 @@ public class EventProcessingPipelineTests
         rulesCache.SwapEngine(compiledRules, listCache);
 
         var alertPipeline = Substitute.For<IAlertPipeline>();
+        var sessionTracker = Substitute.For<ISessionTracker>();
 
         var pipeline = new EventProcessingPipeline(
             rulesCache,
             normalizer,
             batchWriter,
             alertPipeline,
+            sessionTracker,
             NullLogger<EventProcessingPipeline>.Instance);
 
         return (pipeline, alertPipeline);

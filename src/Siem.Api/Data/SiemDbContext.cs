@@ -15,6 +15,10 @@ public class SiemDbContext : DbContext
     public DbSet<ListMemberEntity> ListMembers => Set<ListMemberEntity>();
     public DbSet<SuppressionEntity> Suppressions => Set<SuppressionEntity>();
     public DbSet<AgentEventReadModel> AgentEvents => Set<AgentEventReadModel>();
+    public DbSet<SessionTimelineEntry> SessionTimelineEntries => Set<SessionTimelineEntry>();
+    public DbSet<AgentRiskSummary> AgentRiskSummaries => Set<AgentRiskSummary>();
+    public DbSet<AgentActivityHourlyView> AgentActivityHourly => Set<AgentActivityHourlyView>();
+    public DbSet<ToolUsageHourlyView> ToolUsageHourly => Set<ToolUsageHourlyView>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -132,10 +136,80 @@ public class SiemDbContext : DbContext
             e.Property(s => s.ExpiresAt).HasColumnName("expires_at");
         });
 
-        // Agent Events (read-only view for enrichment queries)
+        // Session Timeline Entries (keyless — returned by get_session_timeline function)
+        modelBuilder.Entity<SessionTimelineEntry>(e =>
+        {
+            e.HasNoKey();
+            e.Property(t => t.EventId).HasColumnName("event_id");
+            e.Property(t => t.Timestamp).HasColumnName("timestamp");
+            e.Property(t => t.EventType).HasColumnName("event_type");
+            e.Property(t => t.AgentId).HasColumnName("agent_id");
+            e.Property(t => t.ToolName).HasColumnName("tool_name");
+            e.Property(t => t.ModelId).HasColumnName("model_id");
+            e.Property(t => t.InputTokens).HasColumnName("input_tokens");
+            e.Property(t => t.OutputTokens).HasColumnName("output_tokens");
+            e.Property(t => t.LatencyMs).HasColumnName("latency_ms");
+            e.Property(t => t.Properties).HasColumnName("properties").HasColumnType("jsonb");
+            e.Property(t => t.AlertIds).HasColumnName("alert_ids");
+            e.Property(t => t.AlertSeverities).HasColumnName("alert_severities");
+        });
+
+        // Agent Risk Summary (keyless — returned by get_agent_risk_summary function)
+        modelBuilder.Entity<AgentRiskSummary>(e =>
+        {
+            e.HasNoKey();
+            e.Property(r => r.AgentId).HasColumnName("agent_id");
+            e.Property(r => r.AgentName).HasColumnName("agent_name");
+            e.Property(r => r.TotalEvents).HasColumnName("total_events");
+            e.Property(r => r.TotalSessions).HasColumnName("total_sessions");
+            e.Property(r => r.OpenAlerts).HasColumnName("open_alerts");
+            e.Property(r => r.CriticalAlerts).HasColumnName("critical_alerts");
+            e.Property(r => r.UniqueTools).HasColumnName("unique_tools");
+            e.Property(r => r.TotalTokens).HasColumnName("total_tokens");
+            e.Property(r => r.AvgLatencyMs).HasColumnName("avg_latency_ms");
+            e.Property(r => r.EventsPerMinute).HasColumnName("events_per_minute");
+            e.Property(r => r.TopEventTypes).HasColumnName("top_event_types").HasColumnType("jsonb");
+            e.Property(r => r.TopTools).HasColumnName("top_tools").HasColumnType("jsonb");
+        });
+
+        // Agent Activity Hourly (continuous aggregate view)
+        modelBuilder.Entity<AgentActivityHourlyView>(e =>
+        {
+            e.HasNoKey();
+            e.ToView("agent_activity_hourly");
+            e.Property(a => a.Bucket).HasColumnName("bucket");
+            e.Property(a => a.AgentId).HasColumnName("agent_id");
+            e.Property(a => a.AgentName).HasColumnName("agent_name");
+            e.Property(a => a.EventType).HasColumnName("event_type");
+            e.Property(a => a.EventCount).HasColumnName("event_count");
+            e.Property(a => a.TotalInputTokens).HasColumnName("total_input_tokens");
+            e.Property(a => a.TotalOutputTokens).HasColumnName("total_output_tokens");
+            e.Property(a => a.TotalTokens).HasColumnName("total_tokens");
+            e.Property(a => a.AvgLatencyMs).HasColumnName("avg_latency_ms");
+            e.Property(a => a.MaxLatencyMs).HasColumnName("max_latency_ms");
+            e.Property(a => a.P95LatencyMs).HasColumnName("p95_latency_ms");
+            e.Property(a => a.UniqueSessionsCount).HasColumnName("unique_sessions");
+            e.Property(a => a.UniqueToolsUsed).HasColumnName("unique_tools_used");
+        });
+
+        // Tool Usage Hourly (continuous aggregate view)
+        modelBuilder.Entity<ToolUsageHourlyView>(e =>
+        {
+            e.HasNoKey();
+            e.ToView("tool_usage_hourly");
+            e.Property(t => t.Bucket).HasColumnName("bucket");
+            e.Property(t => t.ToolName).HasColumnName("tool_name");
+            e.Property(t => t.AgentId).HasColumnName("agent_id");
+            e.Property(t => t.InvocationCount).HasColumnName("invocation_count");
+            e.Property(t => t.AvgLatencyMs).HasColumnName("avg_latency_ms");
+            e.Property(t => t.UniqueSessions).HasColumnName("unique_sessions");
+        });
+
+        // Agent Events (read model for the agent_events hypertable)
         modelBuilder.Entity<AgentEventReadModel>(e =>
         {
             e.ToTable("agent_events");
+            e.HasKey(ev => ev.EventId);
             e.Property(ev => ev.EventId).HasColumnName("event_id");
             e.Property(ev => ev.Timestamp).HasColumnName("timestamp");
             e.Property(ev => ev.AgentId).HasColumnName("agent_id");
