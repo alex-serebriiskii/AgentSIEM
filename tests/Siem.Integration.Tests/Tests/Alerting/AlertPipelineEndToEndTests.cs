@@ -52,7 +52,7 @@ public class AlertPipelineEndToEndTests
         };
 
         var dedup = new AlertDeduplicator(IntegrationTestFixture.RedisMultiplexer, config);
-        var throttler = new AlertThrottler(IntegrationTestFixture.RedisMultiplexer, config);
+        var throttler = new AlertThrottler(IntegrationTestFixture.RedisMultiplexer, config, NullLogger<AlertThrottler>.Instance);
         var retryWorker = new NotificationRetryWorker(NullLogger<NotificationRetryWorker>.Instance, new NotificationRetryConfig());
         var router = new NotificationRouter(
             channels ?? [],

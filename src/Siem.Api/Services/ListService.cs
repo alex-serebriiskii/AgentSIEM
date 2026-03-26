@@ -6,7 +6,7 @@ using Siem.Api.Models.Responses;
 
 namespace Siem.Api.Services;
 
-public class ListService(SiemDbContext db, IRecompilationCoordinator coordinator) : IListService
+public class ListService(SiemDbContext db, IRecompilationCoordinator coordinator, ILogger<ListService> logger) : IListService
 {
     public async Task<ServiceResult<IReadOnlyList<ManagedListSummaryResponse>>> ListAllAsync(
         CancellationToken ct)
@@ -61,8 +61,8 @@ public class ListService(SiemDbContext db, IRecompilationCoordinator coordinator
         db.ManagedLists.Add(entity);
         await db.SaveChangesAsync(ct);
 
-        coordinator.SignalInvalidation(
-            new InvalidationSignal(InvalidationReason.ListUpdated, entity.Id));
+        InvalidationHelper.SignalWithRetry(coordinator,
+            new InvalidationSignal(InvalidationReason.ListUpdated, entity.Id), logger);
 
         return ServiceResult<ManagedListSummaryResponse>.Success(
             ManagedListSummaryResponse.FromEntity(entity));
@@ -92,8 +92,8 @@ public class ListService(SiemDbContext db, IRecompilationCoordinator coordinator
         list.UpdatedAt = now;
         await db.SaveChangesAsync(ct);
 
-        coordinator.SignalInvalidation(
-            new InvalidationSignal(InvalidationReason.ListUpdated, id));
+        InvalidationHelper.SignalWithRetry(coordinator,
+            new InvalidationSignal(InvalidationReason.ListUpdated, id), logger);
 
         return ServiceResult<object>.Success(
             new { memberCount = request.Members.Count });

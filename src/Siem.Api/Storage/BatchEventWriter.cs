@@ -140,14 +140,14 @@ public class BatchEventWriter : IAsyncDisposable
             await writer.WriteAsync(evt.EventType, NpgsqlDbType.Text);
 
             // F# Option fields → SQL nulls
-            await WriteOptionalString(writer, evt.ModelId);
-            await WriteOptionalInt(writer, evt.InputTokens);
-            await WriteOptionalInt(writer, evt.OutputTokens);
-            await WriteOptionalDouble(writer, evt.LatencyMs);
-            await WriteOptionalString(writer, evt.ToolName);
-            await WriteOptionalString(writer, evt.ToolInput);
-            await WriteOptionalString(writer, evt.ToolOutput);
-            await WriteOptionalString(writer, evt.ContentHash);
+            await WriteOptional(writer, evt.ModelId, NpgsqlDbType.Text);
+            await WriteOptional(writer, evt.InputTokens, NpgsqlDbType.Integer);
+            await WriteOptional(writer, evt.OutputTokens, NpgsqlDbType.Integer);
+            await WriteOptional(writer, evt.LatencyMs, NpgsqlDbType.Double);
+            await WriteOptional(writer, evt.ToolName, NpgsqlDbType.Text);
+            await WriteOptional(writer, evt.ToolInput, NpgsqlDbType.Text);
+            await WriteOptional(writer, evt.ToolOutput, NpgsqlDbType.Text);
+            await WriteOptional(writer, evt.ContentHash, NpgsqlDbType.Text);
 
             // Properties map → JSONB
             var propsDict = new Dictionary<string, JsonElement>();
@@ -162,32 +162,13 @@ public class BatchEventWriter : IAsyncDisposable
         await writer.CompleteAsync();
     }
 
-    private static async Task WriteOptionalString(
+    private static async Task WriteOptional<T>(
         NpgsqlBinaryImporter writer,
-        FSharpOption<string> opt)
+        FSharpOption<T> opt,
+        NpgsqlDbType dbType)
     {
-        if (FSharpOption<string>.get_IsSome(opt))
-            await writer.WriteAsync(opt.Value, NpgsqlDbType.Text);
-        else
-            await writer.WriteNullAsync();
-    }
-
-    private static async Task WriteOptionalInt(
-        NpgsqlBinaryImporter writer,
-        FSharpOption<int> opt)
-    {
-        if (FSharpOption<int>.get_IsSome(opt))
-            await writer.WriteAsync(opt.Value, NpgsqlDbType.Integer);
-        else
-            await writer.WriteNullAsync();
-    }
-
-    private static async Task WriteOptionalDouble(
-        NpgsqlBinaryImporter writer,
-        FSharpOption<double> opt)
-    {
-        if (FSharpOption<double>.get_IsSome(opt))
-            await writer.WriteAsync(opt.Value, NpgsqlDbType.Double);
+        if (FSharpOption<T>.get_IsSome(opt))
+            await writer.WriteAsync(opt.Value, dbType);
         else
             await writer.WriteNullAsync();
     }

@@ -5,15 +5,13 @@ using Siem.Api.Models.Responses;
 
 namespace Siem.Api.Services;
 
-public class AlertService(SiemDbContext db) : IAlertService
+public class AlertService(SiemDbContext db, PaginationConfig paginationConfig) : IAlertService
 {
     public async Task<PaginatedResult<AlertResponse>> ListAsync(
         string? status, string? severity, string? agentId,
         int page, int pageSize, CancellationToken ct)
     {
-        if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 1;
-        if (pageSize > 200) pageSize = 200;
+        (page, pageSize) = PaginationConfig.Clamp(page, pageSize, paginationConfig.AlertsMaxPageSize);
 
         var query = db.Alerts.AsQueryable();
 
@@ -27,7 +25,7 @@ public class AlertService(SiemDbContext db) : IAlertService
             query = query.Where(a => a.AgentId == agentId);
 
         var totalCount = await query.CountAsync(ct);
-        var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+        var totalPages = PaginationConfig.TotalPages(totalCount, pageSize);
 
         var alerts = await query
             .OrderByDescending(a => a.TriggeredAt)

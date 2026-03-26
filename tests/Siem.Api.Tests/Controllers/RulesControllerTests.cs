@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Siem.Api.Controllers;
 using Siem.Api.Data;
@@ -22,7 +23,8 @@ public class RulesControllerTests : IDisposable
     {
         _db = DbContextFactory.Create();
         _coordinator = Substitute.For<IRecompilationCoordinator>();
-        _service = new RuleService(_db, _coordinator);
+        _coordinator.SignalInvalidation(Arg.Any<InvalidationSignal>()).Returns(true);
+        _service = new RuleService(_db, _coordinator, NullLogger<RuleService>.Instance);
         _controller = new RulesController(_service);
     }
 

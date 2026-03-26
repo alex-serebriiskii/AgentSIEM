@@ -18,9 +18,7 @@ public class EventService(SiemDbContext db, PaginationConfig paginationConfig) :
         int pageSize,
         CancellationToken ct)
     {
-        if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 1;
-        if (pageSize > paginationConfig.EventsMaxPageSize) pageSize = paginationConfig.EventsMaxPageSize;
+        (page, pageSize) = PaginationConfig.Clamp(page, pageSize, paginationConfig.EventsMaxPageSize);
 
         var effectiveStart = start?.UtcDateTime ?? DateTime.UtcNow.AddHours(-1);
         var effectiveEnd = end?.UtcDateTime ?? DateTime.UtcNow;
@@ -48,7 +46,7 @@ public class EventService(SiemDbContext db, PaginationConfig paginationConfig) :
         }
 
         var totalCount = await query.CountAsync(ct);
-        var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+        var totalPages = PaginationConfig.TotalPages(totalCount, pageSize);
 
         var events = await query
             .OrderByDescending(e => e.Timestamp)

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.FSharp.Collections;
-using Microsoft.FSharp.Core;
 using Siem.Api.Kafka;
+using Siem.Api.Services;
 using Siem.Rules.Core;
 
 namespace Siem.Api.Normalization;
@@ -42,14 +42,14 @@ public class AgentEventNormalizer : IEventNormalizer
             agentId:      raw.AgentId ?? "unknown",
             agentName:    raw.AgentName ?? "unknown",
             eventType:    NormalizeEventType(raw.EventType ?? "unknown"),
-            modelId:      ToFSharpOption(raw.ModelId),
-            inputTokens:  ToFSharpOptionInt(raw.InputTokens),
-            outputTokens: ToFSharpOptionInt(raw.OutputTokens),
-            latencyMs:    ToFSharpOptionDouble(raw.LatencyMs),
-            toolName:     ToFSharpOption(raw.ToolName),
-            toolInput:    ToFSharpOption(raw.ToolInput),
-            toolOutput:   ToFSharpOption(raw.ToolOutput),
-            contentHash:  ToFSharpOption(raw.ContentHash),
+            modelId:      raw.ModelId.ToFSharpOption(),
+            inputTokens:  raw.InputTokens.ToFSharpOptionValue(),
+            outputTokens: raw.OutputTokens.ToFSharpOptionValue(),
+            latencyMs:    raw.LatencyMs.ToFSharpOptionValue(),
+            toolName:     raw.ToolName.ToFSharpOption(),
+            toolInput:    raw.ToolInput.ToFSharpOption(),
+            toolOutput:   raw.ToolOutput.ToFSharpOption(),
+            contentHash:  raw.ContentHash.ToFSharpOption(),
             properties:   MapModule.OfSeq(
                               properties.Select(kvp =>
                                   new Tuple<string, JsonElement>(kvp.Key, kvp.Value)))
@@ -89,18 +89,4 @@ public class AgentEventNormalizer : IEventNormalizer
         };
     }
 
-    private static FSharpOption<string> ToFSharpOption(string? value) =>
-        value != null
-            ? FSharpOption<string>.Some(value)
-            : FSharpOption<string>.None;
-
-    private static FSharpOption<int> ToFSharpOptionInt(int? value) =>
-        value.HasValue
-            ? FSharpOption<int>.Some(value.Value)
-            : FSharpOption<int>.None;
-
-    private static FSharpOption<double> ToFSharpOptionDouble(double? value) =>
-        value.HasValue
-            ? FSharpOption<double>.Some(value.Value)
-            : FSharpOption<double>.None;
 }

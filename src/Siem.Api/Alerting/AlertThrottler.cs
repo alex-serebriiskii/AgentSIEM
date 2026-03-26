@@ -1,3 +1,4 @@
+using Siem.Api.Shared;
 using StackExchange.Redis;
 
 namespace Siem.Api.Alerting;
@@ -11,12 +12,17 @@ public class AlertThrottler : IAlertThrottler
     private readonly IDatabase _redis;
     private readonly int _maxPerWindow;
     private readonly TimeSpan _window;
+    private readonly ILogger<AlertThrottler> _logger;
 
-    public AlertThrottler(IConnectionMultiplexer redis, AlertPipelineConfig config)
+    public AlertThrottler(
+        IConnectionMultiplexer redis,
+        AlertPipelineConfig config,
+        ILogger<AlertThrottler> logger)
     {
         _redis = redis.GetDatabase();
         _maxPerWindow = config.ThrottleMaxAlertsPerWindow;
         _window = config.ThrottleWindow;
+        _logger = logger;
     }
 
     /// <summary>
@@ -25,25 +31,42 @@ public class AlertThrottler : IAlertThrottler
     /// </summary>
     public async Task<bool> IsThrottledAsync(Guid ruleId, CancellationToken ct = default)
     {
-        var key = $"alert:throttle:{ruleId}";
-        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var windowStart = now - (long)_window.TotalMilliseconds;
+        try
+        {
+            var key = RedisKeys.AlertThrottle(ruleId);
+            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var windowStart = now - (long)_window.TotalMilliseconds;
 
-        var transaction = _redis.CreateTransaction();
+            var transaction = _redis.CreateTransaction();
 
-        // Add this alert attempt
-        _ = transaction.SortedSetAddAsync(key, now.ToString(), now);
+            // Add this alert attempt
+            _ = transaction.SortedSetAddAsync(key, now.ToString(), now);
 
-        // Remove entries outside window
-        _ = transaction.SortedSetRemoveRangeByScoreAsync(
-            key, double.NegativeInfinity, windowStart);
+            // Remove entries outside window
+            _ = transaction.SortedSetRemoveRangeByScoreAsync(
+                key, double.NegativeInfinity, windowStart);
 
-        // Set TTL to twice the window to allow cleanup
-        _ = transaction.KeyExpireAsync(key, _window + _window);
+            // Set TTL to twice the window to allow cleanup
+            _ = transaction.KeyExpireAsync(key, _window + _window);
 
-        await transaction.ExecuteAsync();
+            await transaction.ExecuteAsync();
 
-        var count = await _redis.SortedSetLengthAsync(key);
-        return count > _maxPerWindow;
+            var count = await _redis.SortedSetLengthAsync(key);
+            return count > _maxPerWindow;
+        }
+        catch (RedisConnectionException ex)
+        {
+            _logger.LogWarning(ex,
+                "Redis connection failed checking throttle for rule {RuleId}",
+                ruleId);
+            return false;
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex,
+                "Redis timeout checking throttle for rule {RuleId}",
+                ruleId);
+            return false;
+        }
     }
 }

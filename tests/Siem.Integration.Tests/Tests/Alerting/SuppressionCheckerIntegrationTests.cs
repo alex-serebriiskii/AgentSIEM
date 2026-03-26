@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Siem.Api.Alerting;
 using Siem.Api.Data.Entities;
+using Microsoft.Extensions.Logging.Abstractions;
 using Siem.Integration.Tests.Fixtures;
 using Siem.Integration.Tests.Helpers;
 
@@ -19,7 +20,7 @@ public class SuppressionCheckerIntegrationTests
     public async Task NotSuppressed_WhenNoSuppressions()
     {
         await using var db = IntegrationTestFixture.CreateDbContext();
-        var checker = new SuppressionChecker(db);
+        var checker = new SuppressionChecker(db, NullLogger<SuppressionChecker>.Instance);
 
         var result = await checker.IsSuppressedAsync(Guid.NewGuid(), "agent-001");
 
@@ -47,7 +48,7 @@ public class SuppressionCheckerIntegrationTests
         }
 
         await using var db2 = IntegrationTestFixture.CreateDbContext();
-        var checker = new SuppressionChecker(db2);
+        var checker = new SuppressionChecker(db2, NullLogger<SuppressionChecker>.Instance);
 
         var result = await checker.IsSuppressedAsync(ruleId, "any-agent");
 
@@ -73,7 +74,7 @@ public class SuppressionCheckerIntegrationTests
         }
 
         await using var db2 = IntegrationTestFixture.CreateDbContext();
-        var checker = new SuppressionChecker(db2);
+        var checker = new SuppressionChecker(db2, NullLogger<SuppressionChecker>.Instance);
 
         var result = await checker.IsSuppressedAsync(Guid.NewGuid(), "agent-001");
 
@@ -101,7 +102,7 @@ public class SuppressionCheckerIntegrationTests
         }
 
         await using var db2 = IntegrationTestFixture.CreateDbContext();
-        var checker = new SuppressionChecker(db2);
+        var checker = new SuppressionChecker(db2, NullLogger<SuppressionChecker>.Instance);
 
         var result = await checker.IsSuppressedAsync(ruleId, "agent-001");
 
@@ -129,7 +130,7 @@ public class SuppressionCheckerIntegrationTests
         }
 
         await using var db2 = IntegrationTestFixture.CreateDbContext();
-        var checker = new SuppressionChecker(db2);
+        var checker = new SuppressionChecker(db2, NullLogger<SuppressionChecker>.Instance);
 
         var result = await checker.IsSuppressedAsync(ruleId, "agent-001");
 
@@ -158,7 +159,7 @@ public class SuppressionCheckerIntegrationTests
         }
 
         await using var db2 = IntegrationTestFixture.CreateDbContext();
-        var checker = new SuppressionChecker(db2);
+        var checker = new SuppressionChecker(db2, NullLogger<SuppressionChecker>.Instance);
 
         var result = await checker.IsSuppressedAsync(differentRuleId, "agent-001");
 

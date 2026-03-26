@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Siem.Api.Alerting;
+using Microsoft.Extensions.Logging.Abstractions;
 using Siem.Integration.Tests.Fixtures;
 using Siem.Integration.Tests.Helpers;
 
@@ -20,7 +21,7 @@ public class AlertThrottlerIntegrationTests
             ThrottleMaxAlertsPerWindow = 10,
             ThrottleWindowMinutes = 5
         };
-        _throttler = new AlertThrottler(IntegrationTestFixture.RedisMultiplexer, _config);
+        _throttler = new AlertThrottler(IntegrationTestFixture.RedisMultiplexer, _config, NullLogger<AlertThrottler>.Instance);
     }
 
     [Test]
