@@ -23,6 +23,35 @@ public static class AlertingServiceExtensions
         services.AddScoped<AlertEnricher>();
         services.AddScoped<AlertPersistence>();
 
+        // Notification channels
+        // SignalR is always registered (real-time UI channel)
+        services.AddSingleton<INotificationChannel, SignalRNotificationChannel>();
+
+        // Conditional channels — only registered when config section exists
+        var webhooksSection = config.GetSection("Webhooks");
+        if (webhooksSection.Exists())
+        {
+            var webhookConfig = webhooksSection.Get<WebhookConfig>() ?? new WebhookConfig();
+            services.AddSingleton(webhookConfig);
+            services.AddSingleton<INotificationChannel, WebhookNotificationChannel>();
+        }
+
+        var slackSection = config.GetSection("Slack");
+        if (slackSection.Exists())
+        {
+            var slackConfig = slackSection.Get<SlackConfig>() ?? new SlackConfig();
+            services.AddSingleton(slackConfig);
+            services.AddSingleton<INotificationChannel, SlackNotificationChannel>();
+        }
+
+        var pagerDutySection = config.GetSection("PagerDuty");
+        if (pagerDutySection.Exists())
+        {
+            var pagerDutyConfig = pagerDutySection.Get<PagerDutyConfig>() ?? new PagerDutyConfig();
+            services.AddSingleton(pagerDutyConfig);
+            services.AddSingleton<INotificationChannel, PagerDutyNotificationChannel>();
+        }
+
         // Notification router (singleton)
         services.AddSingleton<NotificationRouter>();
 

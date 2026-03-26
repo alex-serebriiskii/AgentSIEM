@@ -137,6 +137,28 @@ public static class TestEntityBuilders
         return entity;
     }
 
+    public static SuppressionEntity CreateSuppression(
+        Guid? id = null,
+        Guid? ruleId = null,
+        string? agentId = null,
+        string reason = "Test suppression",
+        string createdBy = "test-user",
+        DateTime? createdAt = null,
+        DateTime? expiresAt = null)
+    {
+        var now = createdAt ?? DateTime.UtcNow;
+        return new SuppressionEntity
+        {
+            Id = id ?? Guid.NewGuid(),
+            RuleId = ruleId,
+            AgentId = agentId,
+            Reason = reason,
+            CreatedBy = createdBy,
+            CreatedAt = now,
+            ExpiresAt = expiresAt ?? now.AddHours(1)
+        };
+    }
+
     public static JsonElement ParseJson(string json)
     {
         return JsonDocument.Parse(json).RootElement;
