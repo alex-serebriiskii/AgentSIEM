@@ -6,7 +6,7 @@ namespace Siem.Api.Alerting;
 /// Per-rule rate limiter using Redis sorted set sliding window.
 /// Prevents a single noisy rule from flooding the notification channels.
 /// </summary>
-public class AlertThrottler
+public class AlertThrottler : IAlertThrottler
 {
     private readonly IDatabase _redis;
     private readonly int _maxPerWindow;

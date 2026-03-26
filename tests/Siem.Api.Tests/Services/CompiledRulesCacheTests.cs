@@ -1,6 +1,4 @@
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.FSharp.Collections;
 using NSubstitute;
 using Siem.Api.Services;
@@ -39,7 +37,7 @@ public class CompiledRulesCacheTests
         var initialEngine = _cache.Engine;
 
         var emptyRules = ListModule.Empty<Compiler.CompiledRule>();
-        var listCache = CreateListCacheService();
+        var listCache = Substitute.For<IListCacheService>();
 
         _cache.SwapEngine(emptyRules, listCache);
 
@@ -52,7 +50,7 @@ public class CompiledRulesCacheTests
         var before = DateTime.UtcNow;
 
         var emptyRules = ListModule.Empty<Compiler.CompiledRule>();
-        var listCache = CreateListCacheService();
+        var listCache = Substitute.For<IListCacheService>();
 
         _cache.SwapEngine(emptyRules, listCache);
 
@@ -64,7 +62,7 @@ public class CompiledRulesCacheTests
     public void SwapEngine_CalledTwice_ReflectsLatestSwap()
     {
         var emptyRules = ListModule.Empty<Compiler.CompiledRule>();
-        var listCache = CreateListCacheService();
+        var listCache = Substitute.For<IListCacheService>();
 
         _cache.SwapEngine(emptyRules, listCache);
         var firstEngine = _cache.Engine;
@@ -76,10 +74,4 @@ public class CompiledRulesCacheTests
         _cache.LastCompilation.CompiledAt.Should().BeOnOrAfter(firstCompilation);
     }
 
-    private static ListCacheService CreateListCacheService()
-    {
-        var scopeFactory = Substitute.For<IServiceScopeFactory>();
-        var logger = Substitute.For<ILogger<ListCacheService>>();
-        return new ListCacheService(scopeFactory, logger);
-    }
 }

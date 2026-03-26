@@ -7,7 +7,7 @@ namespace Siem.Api.Notifications;
 /// exponential backoff (30s, 2min, 10min). Max 3 attempts per notification.
 /// Uses System.Threading.Channels for an async producer/consumer queue.
 /// </summary>
-public class NotificationRetryWorker : BackgroundService
+public class NotificationRetryWorker : BackgroundService, INotificationRetryWorker
 {
     private readonly Channel<PendingNotification> _channel;
     private readonly ILogger<NotificationRetryWorker> _logger;

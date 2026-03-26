@@ -3,20 +3,19 @@ using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Siem.Api.Controllers;
 using Siem.Api.Services;
-using Siem.Rules.Core;
 
 namespace Siem.Api.Tests.Controllers;
 
 public class EngineControllerTests
 {
-    private readonly CompiledRulesCache _rulesCache;
+    private readonly ICompiledRulesCache _rulesCache;
     private readonly IRecompilationCoordinator _coordinator;
     private readonly EngineController _controller;
 
     public EngineControllerTests()
     {
-        var stateProvider = Substitute.For<Evaluator.IStateProvider>();
-        _rulesCache = new CompiledRulesCache(stateProvider);
+        _rulesCache = Substitute.For<ICompiledRulesCache>();
+        _rulesCache.LastCompilation.Returns(CompilationMetadata.Empty);
         _coordinator = Substitute.For<IRecompilationCoordinator>();
         _controller = new EngineController(_rulesCache, _coordinator);
     }

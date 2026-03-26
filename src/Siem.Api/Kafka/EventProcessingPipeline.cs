@@ -32,7 +32,7 @@ public enum ProcessingResult
 /// </summary>
 public class EventProcessingPipeline
 {
-    private readonly CompiledRulesCache _rulesCache;
+    private readonly ICompiledRulesCache _rulesCache;
     private readonly IEventNormalizer _normalizer;
     private readonly BatchEventWriter _batchWriter;
     private readonly IAlertPipeline _alertPipeline;
@@ -49,7 +49,7 @@ public class EventProcessingPipeline
         Meter.CreateHistogram<double>("siem.evaluate_ms");
 
     public EventProcessingPipeline(
-        CompiledRulesCache rulesCache,
+        ICompiledRulesCache rulesCache,
         IEventNormalizer normalizer,
         BatchEventWriter batchWriter,
         IAlertPipeline alertPipeline,

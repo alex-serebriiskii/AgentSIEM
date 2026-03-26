@@ -1,13 +1,77 @@
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.FSharp.Collections;
 using Microsoft.FSharp.Core;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Siem.Api.Alerting;
+using Siem.Api.Data;
+using Siem.Api.Notifications;
 using Siem.Rules.Core;
 
 namespace Siem.Api.Tests.Alerting;
 
 public class AlertPipelineTests
 {
+    private readonly IAlertDeduplicator _dedup;
+    private readonly IAlertThrottler _throttler;
+    private readonly INotificationRouter _router;
+    private readonly SuppressionChecker _suppression;
+    private readonly AlertEnricher _enricher;
+    private readonly AlertPersistence _persistence;
+    private readonly AlertPipeline _pipeline;
+
+    public AlertPipelineTests()
+    {
+        _dedup = Substitute.For<IAlertDeduplicator>();
+        _throttler = Substitute.For<IAlertThrottler>();
+        _router = Substitute.For<INotificationRouter>();
+
+        _suppression = Substitute.For<SuppressionChecker>(default(SiemDbContext)!);
+        _enricher = Substitute.For<AlertEnricher>(default(SiemDbContext)!, default(Microsoft.Extensions.Logging.ILogger<AlertEnricher>)!);
+        _persistence = Substitute.For<AlertPersistence>(default(SiemDbContext)!, default(Microsoft.Extensions.Logging.ILogger<AlertPersistence>)!);
+
+        // Wire up IServiceScopeFactory to return our mocks
+        var serviceProvider = Substitute.For<IServiceProvider>();
+        serviceProvider.GetService(typeof(SuppressionChecker)).Returns(_suppression);
+        serviceProvider.GetService(typeof(AlertEnricher)).Returns(_enricher);
+        serviceProvider.GetService(typeof(AlertPersistence)).Returns(_persistence);
+
+        var scope = Substitute.For<IServiceScope>();
+        scope.ServiceProvider.Returns(serviceProvider);
+
+        var scopeFactory = Substitute.For<IServiceScopeFactory>();
+        scopeFactory.CreateScope().Returns(scope);
+
+        // Default: nothing is duplicate/throttled/suppressed
+        _dedup.IsDuplicateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+        _throttler.IsThrottledAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+        _suppression.IsSuppressedAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+
+        // Default enricher returns a basic alert
+        _enricher.EnrichAsync(Arg.Any<Evaluator.EvaluationResult>(), Arg.Any<AgentEvent>(), Arg.Any<CancellationToken>())
+            .Returns(ci => new EnrichedAlert
+            {
+                RuleId = ci.Arg<Evaluator.EvaluationResult>().RuleId,
+                Severity = "medium",
+                Title = "Test Alert",
+                AgentId = ci.Arg<AgentEvent>().AgentId,
+                TriggeredAt = DateTime.UtcNow
+            });
+
+        // Default persistence returns a new alert ID
+        _persistence.SaveAsync(Arg.Any<EnrichedAlert>(), Arg.Any<AgentEvent>(), Arg.Any<CancellationToken>())
+            .Returns(Guid.NewGuid());
+
+        _pipeline = new AlertPipeline(
+            _dedup, _throttler, scopeFactory, _router,
+            NullLogger<AlertPipeline>.Instance);
+    }
+
     private static Evaluator.EvaluationResult CreateEvalResult(Guid? ruleId = null)
     {
         return new Evaluator.EvaluationResult(
@@ -19,14 +83,14 @@ public class AlertPipelineTests
             actions: FSharpList<RuleAction>.Empty);
     }
 
-    private static AgentEvent CreateTestEvent()
+    private static AgentEvent CreateTestEvent(string agentId = "agent-001")
     {
         return new AgentEvent(
             eventId: Guid.NewGuid(),
             timestamp: DateTime.UtcNow,
             sessionId: "sess-001",
             traceId: "trace-001",
-            agentId: "agent-001",
+            agentId: agentId,
             agentName: "TestAgent",
             eventType: "tool_invocation",
             modelId: FSharpOption<string>.None,
@@ -40,71 +104,171 @@ public class AlertPipelineTests
             properties: MapModule.Empty<string, System.Text.Json.JsonElement>());
     }
 
-    // Note: AlertPipeline takes concrete types (not interfaces) for dedup/throttler/router,
-    // so we cannot easily substitute them with NSubstitute. These tests verify the pipeline
-    // structure and serve as compilation-verified stubs. For full integration testing,
-    // you would need to construct real instances with mocked Redis.
+    // ---- Stage 1: Deduplication ----
 
     [Test]
-    public async Task ProcessAsync_WhenDeduplicated_ShortCircuits()
+    public async Task ProcessAsync_WhenDuplicate_ShortCircuitsBeforeThrottle()
     {
-        // This test verifies the pipeline concept.
-        // Full integration requires real AlertDeduplicator with mocked Redis.
-        // Stub: verify the types compile and the pipeline can be instantiated.
+        _dedup.IsDuplicateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        await _pipeline.ProcessAsync(CreateEvalResult(), CreateTestEvent());
+
+        await _throttler.DidNotReceive()
+            .IsThrottledAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await _router.DidNotReceive()
+            .RouteAsync(Arg.Any<EnrichedAlert>(), Arg.Any<CancellationToken>());
+    }
+
+    // ---- Stage 2: Throttle ----
+
+    [Test]
+    public async Task ProcessAsync_WhenThrottled_ShortCircuitsBeforeSuppression()
+    {
+        _throttler.IsThrottledAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        await _pipeline.ProcessAsync(CreateEvalResult(), CreateTestEvent());
+
+        await _suppression.DidNotReceive()
+            .IsSuppressedAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _router.DidNotReceive()
+            .RouteAsync(Arg.Any<EnrichedAlert>(), Arg.Any<CancellationToken>());
+    }
+
+    // ---- Stage 3: Suppression ----
+
+    [Test]
+    public async Task ProcessAsync_WhenSuppressed_ShortCircuitsBeforeEnrichment()
+    {
+        _suppression.IsSuppressedAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        await _pipeline.ProcessAsync(CreateEvalResult(), CreateTestEvent());
+
+        await _enricher.DidNotReceive()
+            .EnrichAsync(Arg.Any<Evaluator.EvaluationResult>(), Arg.Any<AgentEvent>(), Arg.Any<CancellationToken>());
+        await _router.DidNotReceive()
+            .RouteAsync(Arg.Any<EnrichedAlert>(), Arg.Any<CancellationToken>());
+    }
+
+    // ---- Stage 4-6: Full pipeline ----
+
+    [Test]
+    public async Task ProcessAsync_NoFilters_EnrichesPersistsAndRoutes()
+    {
         var evalResult = CreateEvalResult();
         var evt = CreateTestEvent();
 
-        // Verify the types are correct
-        evalResult.Triggered.Should().BeTrue();
-        evalResult.Severity.Should().Be(Severity.Medium);
-        evt.AgentId.Should().Be("agent-001");
+        await _pipeline.ProcessAsync(evalResult, evt);
+
+        // Enrichment happened
+        await _enricher.Received(1)
+            .EnrichAsync(evalResult, evt, Arg.Any<CancellationToken>());
+
+        // Persistence happened
+        await _persistence.Received(1)
+            .SaveAsync(Arg.Any<EnrichedAlert>(), evt, Arg.Any<CancellationToken>());
+
+        // Routing happened
+        await _router.Received(1)
+            .RouteAsync(Arg.Any<EnrichedAlert>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
-    public async Task ProcessAsync_EvaluationResult_HasExpectedFields()
+    public async Task ProcessAsync_PersistenceReturnsId_AlertIdSetBeforeRouting()
+    {
+        var expectedId = Guid.NewGuid();
+        _persistence.SaveAsync(Arg.Any<EnrichedAlert>(), Arg.Any<AgentEvent>(), Arg.Any<CancellationToken>())
+            .Returns(expectedId);
+
+        await _pipeline.ProcessAsync(CreateEvalResult(), CreateTestEvent());
+
+        await _router.Received(1).RouteAsync(
+            Arg.Is<EnrichedAlert>(a => a.AlertId == expectedId),
+            Arg.Any<CancellationToken>());
+    }
+
+    // ---- Stage 6: Routing error handling ----
+
+    [Test]
+    public async Task ProcessAsync_RoutingThrows_DoesNotPropagateException()
+    {
+        _router.RouteAsync(Arg.Any<EnrichedAlert>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("Router misconfigured"));
+
+        var act = () => _pipeline.ProcessAsync(CreateEvalResult(), CreateTestEvent());
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Test]
+    public async Task ProcessAsync_RoutingThrows_AlertStillPersisted()
+    {
+        _router.RouteAsync(Arg.Any<EnrichedAlert>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("boom"));
+
+        await _pipeline.ProcessAsync(CreateEvalResult(), CreateTestEvent());
+
+        // Persistence happened before routing
+        await _persistence.Received(1)
+            .SaveAsync(Arg.Any<EnrichedAlert>(), Arg.Any<AgentEvent>(), Arg.Any<CancellationToken>());
+    }
+
+    // ---- Fingerprint / dedup key ----
+
+    [Test]
+    public async Task ProcessAsync_SameRuleAndAgent_ProducesSameFingerprint()
     {
         var ruleId = Guid.NewGuid();
-        var result = CreateEvalResult(ruleId: ruleId);
+        var evalResult = CreateEvalResult(ruleId);
+        var evt = CreateTestEvent("agent-same");
 
-        result.RuleId.Should().Be(ruleId);
-        result.Triggered.Should().BeTrue();
-        FSharpOption<string>.get_IsSome(result.Detail).Should().BeTrue();
+        string? firstFingerprint = null;
+        string? secondFingerprint = null;
+
+        _dedup.IsDuplicateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                if (firstFingerprint == null)
+                    firstFingerprint = ci.Arg<string>();
+                else
+                    secondFingerprint = ci.Arg<string>();
+                return false;
+            });
+
+        await _pipeline.ProcessAsync(evalResult, evt);
+        await _pipeline.ProcessAsync(evalResult, evt);
+
+        firstFingerprint.Should().Be(secondFingerprint);
     }
 
     [Test]
-    public async Task ProcessAsync_AgentEvent_HasExpectedFields()
+    public async Task ProcessAsync_DifferentAgents_ProduceDifferentFingerprints()
     {
-        var evt = CreateTestEvent();
+        var ruleId = Guid.NewGuid();
+        var evalResult = CreateEvalResult(ruleId);
 
-        evt.SessionId.Should().Be("sess-001");
-        evt.EventType.Should().Be("tool_invocation");
-        evt.AgentId.Should().Be("agent-001");
+        string? firstFingerprint = null;
+        string? secondFingerprint = null;
+
+        _dedup.IsDuplicateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                if (firstFingerprint == null)
+                    firstFingerprint = ci.Arg<string>();
+                else
+                    secondFingerprint = ci.Arg<string>();
+                return false;
+            });
+
+        await _pipeline.ProcessAsync(evalResult, CreateTestEvent("agent-A"));
+        await _pipeline.ProcessAsync(evalResult, CreateTestEvent("agent-B"));
+
+        firstFingerprint.Should().NotBe(secondFingerprint);
     }
 
-    [Test]
-    public async Task EnrichedAlert_CanBeConstructed()
-    {
-        var alert = new EnrichedAlert
-        {
-            AlertId = Guid.NewGuid(),
-            RuleId = Guid.NewGuid(),
-            RuleName = "Test Rule",
-            Severity = "medium",
-            Title = "Test Alert",
-            Detail = "Something happened",
-            AgentId = "agent-001",
-            AgentName = "TestAgent",
-            SessionId = "sess-001",
-            RecentAlertCount = 3,
-            SessionEventCount = 42,
-            RecentTools = new[] { "web_search", "calculator" },
-            TriggeredAt = DateTime.UtcNow
-        };
-
-        alert.RuleName.Should().Be("Test Rule");
-        alert.Severity.Should().Be("medium");
-        alert.RecentTools.Should().HaveCount(2);
-    }
+    // ---- Config defaults ----
 
     [Test]
     public async Task AlertPipelineConfig_HasCorrectDefaults()

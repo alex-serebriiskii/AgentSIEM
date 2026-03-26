@@ -30,11 +30,15 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 // Core services
 // ---------------------------------------------------------------------------
 builder.Services.AddSingleton<ListCacheService>();
+builder.Services.AddSingleton<IListCacheService>(sp =>
+    sp.GetRequiredService<ListCacheService>());
 builder.Services.AddScoped<RuleLoadingService>();
 builder.Services.AddSingleton<RedisStateProvider>();
 builder.Services.AddSingleton<Evaluator.IStateProvider>(sp =>
     sp.GetRequiredService<RedisStateProvider>());
 builder.Services.AddSingleton<CompiledRulesCache>();
+builder.Services.AddSingleton<ICompiledRulesCache>(sp =>
+    sp.GetRequiredService<CompiledRulesCache>());
 builder.Services.AddSingleton<RecompilationCoordinator>();
 builder.Services.AddSingleton<IRecompilationCoordinator>(sp =>
     sp.GetRequiredService<RecompilationCoordinator>());

@@ -21,7 +21,7 @@ public class AlertPersistence
         _logger = logger;
     }
 
-    public async Task<Guid> SaveAsync(
+    public virtual async Task<Guid> SaveAsync(
         EnrichedAlert alert,
         AgentEvent evt,
         CancellationToken ct = default)

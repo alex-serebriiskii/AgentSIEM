@@ -8,13 +8,13 @@ using Siem.Api.Notifications;
 
 namespace Siem.Api.Tests.Notifications;
 
-public class NotificationRouterTests : IDisposable
+public class NotificationRouterTests
 {
     private readonly INotificationChannel _lowChannel;
     private readonly INotificationChannel _mediumChannel;
     private readonly INotificationChannel _highChannel;
     private readonly INotificationChannel _criticalChannel;
-    private readonly NotificationRetryWorker _retryWorker;
+    private readonly INotificationRetryWorker _retryWorker;
     private readonly NotificationRouter _router;
 
     public NotificationRouterTests()
@@ -24,18 +24,12 @@ public class NotificationRouterTests : IDisposable
         _highChannel = CreateMockChannel("high-channel", "high");
         _criticalChannel = CreateMockChannel("critical-channel", "critical");
 
-        _retryWorker = new NotificationRetryWorker(
-            NullLogger<NotificationRetryWorker>.Instance);
+        _retryWorker = Substitute.For<INotificationRetryWorker>();
 
         _router = new NotificationRouter(
             new[] { _lowChannel, _mediumChannel, _highChannel, _criticalChannel },
             _retryWorker,
             NullLogger<NotificationRouter>.Instance);
-    }
-
-    public void Dispose()
-    {
-        _retryWorker.Dispose();
     }
 
     private static INotificationChannel CreateMockChannel(string name, string minimumSeverity)
@@ -126,6 +120,23 @@ public class NotificationRouterTests : IDisposable
         var act = () => _router.RouteAsync(alert);
 
         await act.Should().NotThrowAsync();
+    }
+
+    [Test]
+    public async Task RouteAsync_ChannelThrows_EnqueuesRetry()
+    {
+        _lowChannel.SendAsync(Arg.Any<EnrichedAlert>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new HttpRequestException("Connection refused"));
+
+        var alert = CreateAlert("low");
+
+        await _router.RouteAsync(alert);
+
+        _retryWorker.Received(1).EnqueueRetry(
+            Arg.Is<PendingNotification>(p =>
+                p.Channel == _lowChannel &&
+                p.Alert == alert &&
+                p.AttemptCount == 1));
     }
 
     [Test]

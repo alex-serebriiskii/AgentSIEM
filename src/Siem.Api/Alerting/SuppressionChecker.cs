@@ -19,7 +19,7 @@ public class SuppressionChecker
     /// the given rule and/or agent. Suppressions can target: a specific rule,
     /// a specific agent, or a rule+agent combination.
     /// </summary>
-    public async Task<bool> IsSuppressedAsync(
+    public virtual async Task<bool> IsSuppressedAsync(
         Guid ruleId, string agentId, CancellationToken ct = default)
     {
         return await _db.Suppressions
