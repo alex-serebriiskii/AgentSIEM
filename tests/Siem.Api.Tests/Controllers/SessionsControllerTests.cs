@@ -15,7 +15,9 @@ public class SessionsControllerTests : IDisposable
     public SessionsControllerTests()
     {
         _db = DbContextFactory.Create();
-        _controller = new SessionsController(_db);
+        // NpgsqlDataSource is null — timeline endpoint requires real PostgreSQL
+        // and is covered by integration tests. EF-only endpoints work fine.
+        _controller = new SessionsController(_db, null!);
     }
 
     public void Dispose() => _db.Dispose();
@@ -99,20 +101,21 @@ public class SessionsControllerTests : IDisposable
     [Test]
     public async Task GetSessionTimeline_NonexistentSession_ReturnsNotFound()
     {
-        var result = await _controller.GetSessionTimeline("nonexistent", CancellationToken.None);
+        var result = await _controller.GetSessionTimeline("nonexistent", ct: CancellationToken.None);
         result.Should().BeOfType<NotFoundResult>();
     }
 
     [Test]
-    public async Task GetSessionTimeline_ExistingSession_ThrowsBecauseRawSqlNotSupportedInMemory()
+    public async Task GetSessionTimeline_ExistingSession_ThrowsBecauseNpgsqlRequiresRealDb()
     {
-        // InMemory provider does not support FromSqlInterpolated.
-        // This test documents the limitation; the timeline endpoint is covered by integration tests.
+        // Timeline uses NpgsqlDataSource directly (not EF Core).
+        // Without a real database connection, this throws NullReferenceException.
+        // Full testing is covered by integration tests against real TimescaleDB.
         var session = TestEntityBuilders.CreateSession(sessionId: "sess-timeline");
         _db.AgentSessions.Add(session);
         await _db.SaveChangesAsync();
 
-        var act = () => _controller.GetSessionTimeline("sess-timeline", CancellationToken.None);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var act = () => _controller.GetSessionTimeline("sess-timeline", ct: CancellationToken.None);
+        await act.Should().ThrowAsync<NullReferenceException>();
     }
 }

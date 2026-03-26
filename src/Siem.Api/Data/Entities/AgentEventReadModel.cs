@@ -1,8 +1,5 @@
-using Microsoft.EntityFrameworkCore;
-
 namespace Siem.Api.Data.Entities;
 
-[Keyless]
 public class AgentEventReadModel
 {
     public Guid EventId { get; set; }

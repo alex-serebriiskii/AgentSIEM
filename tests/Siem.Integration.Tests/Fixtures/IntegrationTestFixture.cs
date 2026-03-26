@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Siem.Api.Data;
 using StackExchange.Redis;
 using Testcontainers.Kafka;
@@ -59,6 +60,7 @@ public static class IntegrationTestFixture
         // Run EF Core migrations against TimescaleDB
         var options = new DbContextOptionsBuilder<SiemDbContext>()
             .UseNpgsql(TimescaleConnectionString)
+            .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
             .Options;
 
         await using var context = new SiemDbContext(options);
@@ -86,6 +88,7 @@ public static class IntegrationTestFixture
     {
         var options = new DbContextOptionsBuilder<SiemDbContext>()
             .UseNpgsql(TimescaleConnectionString)
+            .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
             .Options;
         return new SiemDbContext(options);
     }

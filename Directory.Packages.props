@@ -18,6 +18,8 @@
     <PackageVersion Include="StackExchange.Redis" Version="2.8.41" />
     <!-- ASP.NET Swagger -->
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.6" />
+    <!-- Metrics / Prometheus -->
+    <PackageVersion Include="prometheus-net.AspNetCore" Version="8.2.1" />
     <!-- Testing -->
     <PackageVersion Include="TUnit" Version="0.12.6" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />

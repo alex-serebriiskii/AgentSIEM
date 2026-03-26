@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using Siem.Api.Alerting;
 
 namespace Siem.Api.Notifications;
@@ -12,6 +13,12 @@ public class NotificationRouter
     private readonly IReadOnlyList<INotificationChannel> _channels;
     private readonly NotificationRetryWorker _retryWorker;
     private readonly ILogger<NotificationRouter> _logger;
+
+    private static readonly Meter Meter = new("Siem.Notifications");
+    private static readonly Counter<long> NotificationsSent =
+        Meter.CreateCounter<long>("siem.notifications.sent");
+    private static readonly Counter<long> NotificationsFailed =
+        Meter.CreateCounter<long>("siem.notifications.failed");
 
     private static readonly Dictionary<string, int> SeverityOrder = new()
     {
@@ -59,12 +66,18 @@ public class NotificationRouter
         {
             await channel.SendAsync(alert, ct);
 
+            NotificationsSent.Add(1,
+                new KeyValuePair<string, object?>("channel", channel.Name));
+
             _logger.LogDebug(
                 "Notification sent: channel={Channel} alert={AlertId}",
                 channel.Name, alert.AlertId);
         }
         catch (Exception ex)
         {
+            NotificationsFailed.Add(1,
+                new KeyValuePair<string, object?>("channel", channel.Name));
+
             _logger.LogWarning(ex,
                 "Notification failed for channel={Channel} alert={AlertId}. Queuing retry.",
                 channel.Name, alert.AlertId);
