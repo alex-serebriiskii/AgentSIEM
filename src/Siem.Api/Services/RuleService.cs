@@ -52,7 +52,7 @@ public class RuleService(SiemDbContext db, IRecompilationCoordinator coordinator
         db.Rules.Add(entity);
         await db.SaveChangesAsync(ct);
 
-        InvalidationHelper.SignalWithRetry(coordinator,
+        await InvalidationHelper.SignalWithRetryAsync(coordinator,
             new InvalidationSignal(InvalidationReason.RuleCreated, entity.Id), logger);
 
         return ServiceResult<RuleResponse>.Success(RuleResponse.FromEntity(entity));
@@ -121,7 +121,7 @@ public class RuleService(SiemDbContext db, IRecompilationCoordinator coordinator
         rule.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
-        InvalidationHelper.SignalWithRetry(coordinator,
+        await InvalidationHelper.SignalWithRetryAsync(coordinator,
             new InvalidationSignal(InvalidationReason.RuleUpdated, id), logger);
 
         return ServiceResult<RuleResponse>.Success(RuleResponse.FromEntity(rule));
@@ -137,7 +137,7 @@ public class RuleService(SiemDbContext db, IRecompilationCoordinator coordinator
         rule.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
-        InvalidationHelper.SignalWithRetry(coordinator,
+        await InvalidationHelper.SignalWithRetryAsync(coordinator,
             new InvalidationSignal(InvalidationReason.RuleDeleted, id), logger);
 
         return ServiceResult<bool>.Success(true);

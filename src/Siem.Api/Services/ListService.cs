@@ -61,7 +61,7 @@ public class ListService(SiemDbContext db, IRecompilationCoordinator coordinator
         db.ManagedLists.Add(entity);
         await db.SaveChangesAsync(ct);
 
-        InvalidationHelper.SignalWithRetry(coordinator,
+        await InvalidationHelper.SignalWithRetryAsync(coordinator,
             new InvalidationSignal(InvalidationReason.ListUpdated, entity.Id), logger);
 
         return ServiceResult<ManagedListSummaryResponse>.Success(
@@ -92,7 +92,7 @@ public class ListService(SiemDbContext db, IRecompilationCoordinator coordinator
         list.UpdatedAt = now;
         await db.SaveChangesAsync(ct);
 
-        InvalidationHelper.SignalWithRetry(coordinator,
+        await InvalidationHelper.SignalWithRetryAsync(coordinator,
             new InvalidationSignal(InvalidationReason.ListUpdated, id), logger);
 
         return ServiceResult<object>.Success(

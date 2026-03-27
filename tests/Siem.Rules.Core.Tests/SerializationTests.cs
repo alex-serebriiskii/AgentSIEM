@@ -172,4 +172,43 @@ public class SerializationTests
 
         act.Should().Throw<Exception>();
     }
+
+    [Test]
+    public async Task ParseCondition_MissingType_ThrowsWithPropertyName()
+    {
+        var json = JsonValue("{}");
+
+        var act = () => Serialization.parseCondition(json);
+
+        act.Should().Throw<Exception>()
+            .WithMessage("*Missing required property*'type'*");
+    }
+
+    [Test]
+    public async Task ParseCondition_MissingField_ThrowsWithPropertyName()
+    {
+        var json = JsonValue("""
+        {
+            "type": "field",
+            "operator": "Eq",
+            "value": "x"
+        }
+        """);
+
+        var act = () => Serialization.parseCondition(json);
+
+        act.Should().Throw<Exception>()
+            .WithMessage("*Missing required property*'field'*");
+    }
+
+    [Test]
+    public async Task ParseCondition_MissingConditions_ThrowsWithPropertyName()
+    {
+        var json = JsonValue("""{"type": "and"}""");
+
+        var act = () => Serialization.parseCondition(json);
+
+        act.Should().Throw<Exception>()
+            .WithMessage("*Missing required property*'conditions'*");
+    }
 }

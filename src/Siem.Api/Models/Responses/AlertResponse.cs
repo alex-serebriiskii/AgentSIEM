@@ -6,6 +6,9 @@ using Siem.Api.Data.Enums;
 
 public class AlertResponse
 {
+    private static readonly JsonElement EmptyObject =
+        JsonDocument.Parse("{}").RootElement.Clone();
+
     public Guid AlertId { get; set; }
     public Guid RuleId { get; set; }
     public string RuleName { get; set; } = "";
@@ -27,6 +30,20 @@ public class AlertResponse
     public DateTime? SuppressionExpiresAt { get; set; }
     public List<AlertEventResponse>? AlertEvents { get; set; }
 
+    private static JsonElement SafeParseJson(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return EmptyObject;
+        try
+        {
+            return JsonDocument.Parse(json).RootElement.Clone();
+        }
+        catch (JsonException)
+        {
+            return EmptyObject;
+        }
+    }
+
     public static AlertResponse FromEntity(AlertEntity entity, bool includeEvents = false)
     {
         var response = new AlertResponse
@@ -38,7 +55,7 @@ public class AlertResponse
             Status = entity.Status.ToStorageString(),
             Title = entity.Title,
             Detail = entity.Detail,
-            Context = JsonDocument.Parse(entity.Context).RootElement,
+            Context = SafeParseJson(entity.Context),
             AgentId = entity.AgentId,
             SessionId = entity.SessionId,
             TriggeredAt = entity.TriggeredAt,
@@ -46,7 +63,7 @@ public class AlertResponse
             ResolvedAt = entity.ResolvedAt,
             AssignedTo = entity.AssignedTo,
             ResolutionNote = entity.ResolutionNote,
-            Labels = JsonDocument.Parse(entity.Labels).RootElement,
+            Labels = SafeParseJson(entity.Labels),
             Suppressed = entity.Suppressed,
             SuppressedBy = entity.SuppressedBy,
             SuppressionExpiresAt = entity.SuppressionExpiresAt

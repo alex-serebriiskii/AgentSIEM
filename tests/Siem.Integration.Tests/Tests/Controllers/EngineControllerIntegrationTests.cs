@@ -184,12 +184,14 @@ public class EngineControllerIntegrationTests
         var stateProvider = new RedisStateProvider(IntegrationTestFixture.RedisMultiplexer);
         var rulesCache = new CompiledRulesCache(stateProvider);
 
+        var config = new RecompilationConfig();
+        var notifier = new CompilationNotifier(config);
+        var orchestrator = new RuleCompilationOrchestrator(
+            listCache, rulesCache, scopeFactory, notifier,
+            NullLogger<RuleCompilationOrchestrator>.Instance);
         var coordinator = new RecompilationCoordinator(
-            listCache,
-            rulesCache,
-            scopeFactory,
-            NullLogger<RecompilationCoordinator>.Instance,
-            new RecompilationConfig());
+            orchestrator, notifier,
+            NullLogger<RecompilationCoordinator>.Instance, config);
 
         var controller = new EngineController(rulesCache, coordinator);
 

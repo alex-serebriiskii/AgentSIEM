@@ -3,11 +3,11 @@ namespace Siem.Api.Services;
 internal static class InvalidationHelper
 {
     /// <summary>
-    /// Signals invalidation with a short synchronous retry.
+    /// Signals invalidation with a short async retry.
     /// If all attempts fail, logs an error. The coordinator's startup
     /// reload and next signal will eventually catch up.
     /// </summary>
-    public static void SignalWithRetry(
+    public static async Task SignalWithRetryAsync(
         IRecompilationCoordinator coordinator,
         InvalidationSignal signal,
         ILogger logger,
@@ -20,7 +20,7 @@ internal static class InvalidationHelper
                 return;
 
             if (i < maxAttempts - 1)
-                Thread.Sleep(delayMs);
+                await Task.Delay(delayMs);
         }
 
         logger.LogError(
