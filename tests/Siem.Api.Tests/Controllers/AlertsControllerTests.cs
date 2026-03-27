@@ -5,6 +5,7 @@ using Siem.Api.Data;
 using Siem.Api.Models.Requests;
 using Siem.Api.Models.Responses;
 using Siem.Api.Services;
+using Siem.Api.Data.Enums;
 using Siem.Api.Tests.Controllers.Helpers;
 
 namespace Siem.Api.Tests.Controllers;
@@ -53,8 +54,8 @@ public class AlertsControllerTests : IDisposable
     [Test]
     public async Task ListAlerts_FilterByStatus_ReturnsOnlyMatching()
     {
-        _db.Alerts.Add(TestEntityBuilders.CreateAlert(status: "open"));
-        _db.Alerts.Add(TestEntityBuilders.CreateAlert(status: "acknowledged"));
+        _db.Alerts.Add(TestEntityBuilders.CreateAlert(status: AlertStatus.Open));
+        _db.Alerts.Add(TestEntityBuilders.CreateAlert(status: AlertStatus.Acknowledged));
         await _db.SaveChangesAsync();
 
         var result = await _controller.ListAlerts("open", null, null, ct: CancellationToken.None);
@@ -68,8 +69,8 @@ public class AlertsControllerTests : IDisposable
     [Test]
     public async Task ListAlerts_FilterBySeverity_ReturnsOnlyMatching()
     {
-        _db.Alerts.Add(TestEntityBuilders.CreateAlert(severity: "high"));
-        _db.Alerts.Add(TestEntityBuilders.CreateAlert(severity: "low"));
+        _db.Alerts.Add(TestEntityBuilders.CreateAlert(severity: Severity.High));
+        _db.Alerts.Add(TestEntityBuilders.CreateAlert(severity: Severity.Low));
         await _db.SaveChangesAsync();
 
         var result = await _controller.ListAlerts(null, "high", null, ct: CancellationToken.None);
@@ -188,7 +189,7 @@ public class AlertsControllerTests : IDisposable
     [Test]
     public async Task AcknowledgeAlert_OpenAlert_SetsStatusAndTimestamp()
     {
-        var alert = TestEntityBuilders.CreateAlert(status: "open");
+        var alert = TestEntityBuilders.CreateAlert(status: AlertStatus.Open);
         _db.Alerts.Add(alert);
         await _db.SaveChangesAsync();
 
@@ -203,7 +204,7 @@ public class AlertsControllerTests : IDisposable
     [Test]
     public async Task AcknowledgeAlert_ResolvedAlert_ReturnsBadRequest()
     {
-        var alert = TestEntityBuilders.CreateAlert(status: "resolved");
+        var alert = TestEntityBuilders.CreateAlert(status: AlertStatus.Resolved);
         _db.Alerts.Add(alert);
         await _db.SaveChangesAsync();
 
@@ -223,7 +224,7 @@ public class AlertsControllerTests : IDisposable
     [Test]
     public async Task ResolveAlert_ExistingAlert_SetsStatusAndNote()
     {
-        var alert = TestEntityBuilders.CreateAlert(status: "open");
+        var alert = TestEntityBuilders.CreateAlert(status: AlertStatus.Open);
         _db.Alerts.Add(alert);
         await _db.SaveChangesAsync();
 

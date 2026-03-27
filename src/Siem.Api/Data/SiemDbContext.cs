@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Siem.Api.Data.Entities;
+using Siem.Api.Data.Enums;
 
 namespace Siem.Api.Data;
 
@@ -31,7 +32,10 @@ public class SiemDbContext : DbContext
             e.Property(r => r.Name).HasColumnName("name");
             e.Property(r => r.Description).HasColumnName("description");
             e.Property(r => r.Enabled).HasColumnName("enabled");
-            e.Property(r => r.Severity).HasColumnName("severity");
+            e.Property(r => r.Severity).HasColumnName("severity")
+                .HasConversion(
+                    v => v.ToStorageString(),
+                    v => EnumExtensions.ParseSeverity(v));
             e.Property(r => r.ConditionJson).HasColumnName("condition_json").HasColumnType("jsonb");
             e.Property(r => r.EvaluationType).HasColumnName("evaluation_type");
             e.Property(r => r.TemporalConfig).HasColumnName("temporal_config").HasColumnType("jsonb");
@@ -51,8 +55,14 @@ public class SiemDbContext : DbContext
             e.Property(a => a.AlertId).HasColumnName("alert_id");
             e.Property(a => a.RuleId).HasColumnName("rule_id");
             e.Property(a => a.RuleName).HasColumnName("rule_name");
-            e.Property(a => a.Severity).HasColumnName("severity");
-            e.Property(a => a.Status).HasColumnName("status");
+            e.Property(a => a.Severity).HasColumnName("severity")
+                .HasConversion(
+                    v => v.ToStorageString(),
+                    v => EnumExtensions.ParseSeverity(v));
+            e.Property(a => a.Status).HasColumnName("status")
+                .HasConversion(
+                    v => v.ToStorageString(),
+                    v => EnumExtensions.ParseAlertStatus(v));
             e.Property(a => a.Title).HasColumnName("title");
             e.Property(a => a.Detail).HasColumnName("detail");
             e.Property(a => a.Context).HasColumnName("context").HasColumnType("jsonb");

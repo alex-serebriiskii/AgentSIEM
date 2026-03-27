@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Siem.Api.Data;
+using Siem.Api.Data.Enums;
 using Siem.Api.Shared;
 using Siem.Rules.Core;
 using static Siem.Rules.Core.Evaluator;
@@ -89,14 +90,14 @@ public class AlertEnricher
             ruleContext[kvp.Key] = kvp.Value;
         }
 
-        var severityStr = SeverityMapping.ToString(result.Severity);
+        var severity = SeverityMapping.ToEnum(result.Severity);
 
         return new EnrichedAlert
         {
             RuleId = result.RuleId,
             RuleName = rule?.Name ?? "Unknown rule",
-            Severity = severityStr,
-            Title = $"[{severityStr.ToUpper()}] {rule?.Name ?? "Rule triggered"}: {evt.AgentName}",
+            Severity = severity,
+            Title = $"[{severity.ToStorageString().ToUpper()}] {rule?.Name ?? "Rule triggered"}: {evt.AgentName}",
             Detail = result.Detail != null
                 ? Microsoft.FSharp.Core.FSharpOption<string>.get_IsSome(result.Detail)
                     ? result.Detail.Value

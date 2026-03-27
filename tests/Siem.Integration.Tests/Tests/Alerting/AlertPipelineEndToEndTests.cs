@@ -8,7 +8,9 @@ using Microsoft.FSharp.Core;
 using Siem.Api.Alerting;
 using Siem.Api.Data;
 using Siem.Api.Data.Entities;
+using Siem.Api.Data.Enums;
 using Siem.Api.Notifications;
+using Severity = Siem.Api.Data.Enums.Severity;
 using Siem.Integration.Tests.Fixtures;
 using Siem.Integration.Tests.Helpers;
 using Siem.Rules.Core;
@@ -28,12 +30,12 @@ public class AlertPipelineEndToEndTests
 
     private static EvaluationResult CreateEvalResult(
         Guid? ruleId = null,
-        Severity? severity = null)
+        Siem.Rules.Core.Severity? severity = null)
     {
         return new EvaluationResult(
             triggered: true,
             ruleId: ruleId ?? Guid.NewGuid(),
-            severity: severity ?? Severity.Medium,
+            severity: severity ?? Siem.Rules.Core.Severity.Medium,
             detail: FSharpOption<string>.Some("Test alert triggered"),
             context: MapModule.Empty<string, object>(),
             actions: FSharpList<RuleAction>.Empty);
@@ -108,7 +110,7 @@ public class AlertPipelineEndToEndTests
         await using var db2 = IntegrationTestFixture.CreateDbContext();
         var alerts = await db2.Alerts.Where(a => a.RuleId == ruleId).ToListAsync();
         alerts.Should().HaveCount(1);
-        alerts[0].Status.Should().Be("open");
+        alerts[0].Status.Should().Be(AlertStatus.Open);
         alerts[0].RuleName.Should().Be("E2E Test Rule");
 
         // Assert: alert-event junction created
@@ -239,18 +241,18 @@ public class AlertPipelineEndToEndTests
         var ruleId = Guid.NewGuid();
         await using (var db = IntegrationTestFixture.CreateDbContext())
         {
-            db.Rules.Add(TestRuleFactory.CreateSingleEventRule(id: ruleId, name: "Notify Test Rule", severity: "high"));
+            db.Rules.Add(TestRuleFactory.CreateSingleEventRule(id: ruleId, name: "Notify Test Rule", severity: Severity.High));
             await db.SaveChangesAsync();
         }
 
         using var sp = BuildServiceProvider();
-        var lowChannel = new RecordingNotificationChannel("low-channel", "low");
-        var highChannel = new RecordingNotificationChannel("high-channel", "high");
-        var criticalChannel = new RecordingNotificationChannel("critical-channel", "critical");
+        var lowChannel = new RecordingNotificationChannel("low-channel", Severity.Low);
+        var highChannel = new RecordingNotificationChannel("high-channel", Severity.High);
+        var criticalChannel = new RecordingNotificationChannel("critical-channel", Severity.Critical);
 
         var pipeline = CreatePipeline(sp, channels: [lowChannel, highChannel, criticalChannel]);
 
-        var evalResult = CreateEvalResult(ruleId: ruleId, severity: Severity.High);
+        var evalResult = CreateEvalResult(ruleId: ruleId, severity: Siem.Rules.Core.Severity.High);
         var evt = TestEventFactory.CreateToolInvocation(agentId: "agent-notify", sessionId: "sess-notify");
 
         // Act
@@ -273,7 +275,7 @@ public class AlertPipelineEndToEndTests
     {
         // Verify the retry worker picks up queued notifications and delivers them.
         // We enqueue a notification with immediate NextAttemptAt to a recording channel.
-        var recordingChannel = new RecordingNotificationChannel("retry-test", "low");
+        var recordingChannel = new RecordingNotificationChannel("retry-test", Severity.Low);
         var retryWorker = new NotificationRetryWorker(NullLogger<NotificationRetryWorker>.Instance, new NotificationRetryConfig());
 
         using var cts = new CancellationTokenSource();
@@ -284,7 +286,7 @@ public class AlertPipelineEndToEndTests
             AlertId = Guid.NewGuid(),
             RuleId = Guid.NewGuid(),
             RuleName = "Retry Test Rule",
-            Severity = "medium",
+            Severity = Severity.Medium,
             Title = "Retry Test",
             Detail = "Testing retry",
             AgentId = "agent-retry",
@@ -331,7 +333,7 @@ public class AlertPipelineEndToEndTests
             AlertId = Guid.NewGuid(),
             RuleId = Guid.NewGuid(),
             RuleName = "Retry Fail Test",
-            Severity = "medium",
+            Severity = Severity.Medium,
             Title = "Retry Fail Test",
             Detail = "Testing retry failure path",
             AgentId = "agent-retry-fail",
@@ -368,14 +370,14 @@ public class AlertPipelineEndToEndTests
         private readonly List<EnrichedAlert> _sentAlerts = [];
 
         public RecordingNotificationChannel(
-            string name = "recording", string minimumSeverity = "low")
+            string name = "recording", Severity minimumSeverity = Severity.Low)
         {
             Name = name;
             MinimumSeverity = minimumSeverity;
         }
 
         public string Name { get; }
-        public string MinimumSeverity { get; }
+        public Severity MinimumSeverity { get; }
         public IReadOnlyList<EnrichedAlert> SentAlerts => _sentAlerts;
 
         public Task SendAsync(EnrichedAlert alert, CancellationToken ct = default)
@@ -393,7 +395,7 @@ public class AlertPipelineEndToEndTests
         private int _callCount;
 
         public string Name => "fail-once";
-        public string MinimumSeverity => "low";
+        public Severity MinimumSeverity => Severity.Low;
         public int TotalCalls => _callCount;
         public int SuccessfulCalls { get; private set; }
 

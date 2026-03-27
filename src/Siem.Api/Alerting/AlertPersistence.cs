@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Siem.Api.Data;
 using Siem.Api.Data.Entities;
+using Siem.Api.Data.Enums;
 using Siem.Rules.Core;
 
 namespace Siem.Api.Alerting;
@@ -32,7 +33,7 @@ public class AlertPersistence
             RuleId = alert.RuleId,
             RuleName = alert.RuleName,
             Severity = alert.Severity,
-            Status = "open",
+            Status = AlertStatus.Open,
             Title = alert.Title,
             Detail = alert.Detail,
             AgentId = alert.AgentId,
@@ -59,8 +60,9 @@ public class AlertPersistence
             await _db.SaveChangesAsync(ct);
 
             // Update the session's alert tracking via stored procedure
+            var severityStr = alert.Severity.ToStorageString();
             await _db.Database.ExecuteSqlInterpolatedAsync(
-                $"SELECT update_session_alerts({evt.SessionId}, {alert.Severity})",
+                $"SELECT update_session_alerts({evt.SessionId}, {severityStr})",
                 ct);
 
             await transaction.CommitAsync(ct);

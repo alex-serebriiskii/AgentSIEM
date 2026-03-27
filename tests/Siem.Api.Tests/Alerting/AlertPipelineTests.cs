@@ -7,8 +7,10 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Siem.Api.Alerting;
 using Siem.Api.Data;
+using Siem.Api.Data.Enums;
 using Siem.Api.Notifications;
 using Siem.Rules.Core;
+using Severity = Siem.Api.Data.Enums.Severity;
 
 namespace Siem.Api.Tests.Alerting;
 
@@ -57,7 +59,7 @@ public class AlertPipelineTests
             .Returns(ci => new EnrichedAlert
             {
                 RuleId = ci.Arg<Evaluator.EvaluationResult>().RuleId,
-                Severity = "medium",
+                Severity = Severity.Medium,
                 Title = "Test Alert",
                 AgentId = ci.Arg<AgentEvent>().AgentId,
                 TriggeredAt = DateTime.UtcNow
@@ -77,7 +79,7 @@ public class AlertPipelineTests
         return new Evaluator.EvaluationResult(
             triggered: true,
             ruleId: ruleId ?? Guid.NewGuid(),
-            severity: Severity.Medium,
+            severity: Siem.Rules.Core.Severity.Medium,
             detail: FSharpOption<string>.Some("Test alert"),
             context: MapModule.Empty<string, object>(),
             actions: FSharpList<RuleAction>.Empty);

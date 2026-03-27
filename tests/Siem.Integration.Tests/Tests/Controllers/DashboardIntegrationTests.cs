@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Siem.Api.Controllers;
 using Siem.Api.Data.Entities;
+using Siem.Api.Data.Enums;
 using Siem.Api.Models.Requests;
 using Siem.Api.Storage;
 using Siem.Integration.Tests.Fixtures;
@@ -79,9 +80,9 @@ public class DashboardIntegrationTests
     {
         await using var db = IntegrationTestFixture.CreateDbContext();
 
-        db.Alerts.Add(CreateAlert("high", "open"));
-        db.Alerts.Add(CreateAlert("high", "open"));
-        db.Alerts.Add(CreateAlert("low", "resolved"));
+        db.Alerts.Add(CreateAlert(Severity.High, AlertStatus.Open));
+        db.Alerts.Add(CreateAlert(Severity.High, AlertStatus.Open));
+        db.Alerts.Add(CreateAlert(Severity.Low, AlertStatus.Resolved));
         await db.SaveChangesAsync();
 
         var controller = new DashboardController(new Siem.Api.Services.DashboardService(db));
@@ -171,7 +172,7 @@ public class DashboardIntegrationTests
         await writer.FlushAsync();
     }
 
-    private static AlertEntity CreateAlert(string severity, string status)
+    private static AlertEntity CreateAlert(Severity severity, AlertStatus status)
     {
         return new AlertEntity
         {

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Siem.Api.Data.Entities;
+using Siem.Api.Data.Enums;
 
 namespace Siem.Api.Tests.Controllers.Helpers;
 
@@ -15,7 +16,7 @@ public static class TestEntityBuilders
         string name = "Test Rule",
         string description = "Test description",
         bool enabled = true,
-        string severity = "medium",
+        Severity severity = Severity.Medium,
         string? conditionJson = null,
         string evaluationType = "SingleEvent",
         string createdBy = "test-user",
@@ -44,8 +45,8 @@ public static class TestEntityBuilders
         Guid? alertId = null,
         Guid? ruleId = null,
         string ruleName = "Test Rule",
-        string severity = "medium",
-        string status = "open",
+        Severity severity = Severity.Medium,
+        AlertStatus status = AlertStatus.Open,
         string title = "Test Alert",
         string agentId = "agent-001",
         string? sessionId = "sess-001",

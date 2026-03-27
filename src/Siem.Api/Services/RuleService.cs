@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Siem.Api.Data;
 using Siem.Api.Data.Entities;
+using Siem.Api.Data.Enums;
 using Siem.Api.Models.Requests;
 using Siem.Api.Models.Responses;
 using FSharpSerialization = Siem.Rules.Core.Serialization;
@@ -36,7 +37,7 @@ public class RuleService(SiemDbContext db, IRecompilationCoordinator coordinator
             Name = request.Name,
             Description = request.Description,
             Enabled = true,
-            Severity = request.Severity,
+            Severity = EnumExtensions.ParseSeverity(request.Severity),
             ConditionJson = request.ConditionJson.GetRawText(),
             EvaluationType = request.EvaluationType,
             TemporalConfig = request.TemporalConfig?.GetRawText(),
@@ -109,7 +110,7 @@ public class RuleService(SiemDbContext db, IRecompilationCoordinator coordinator
 
         if (request.Name != null) rule.Name = request.Name;
         if (request.Description != null) rule.Description = request.Description;
-        if (request.Severity != null) rule.Severity = request.Severity;
+        if (request.Severity != null) rule.Severity = EnumExtensions.ParseSeverity(request.Severity);
         if (request.EvaluationType != null) rule.EvaluationType = request.EvaluationType;
         if (request.TemporalConfig.HasValue) rule.TemporalConfig = request.TemporalConfig.Value.GetRawText();
         if (request.SequenceConfig.HasValue) rule.SequenceConfig = request.SequenceConfig.Value.GetRawText();

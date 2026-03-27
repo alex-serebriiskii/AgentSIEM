@@ -8,6 +8,7 @@ using Microsoft.FSharp.Control;
 using Microsoft.FSharp.Core;
 using Siem.Api.Data;
 using Siem.Api.Data.Entities;
+using Siem.Api.Data.Enums;
 using Siem.Api.Services;
 using Siem.Integration.Tests.Fixtures;
 using Siem.Integration.Tests.Helpers;
@@ -103,7 +104,7 @@ public class RecompilationCoordinatorTests
                 Name = "Unapproved Tool Alert",
                 Description = "Alert on unapproved tools",
                 Enabled = true,
-                Severity = "high",
+                Severity = Siem.Api.Data.Enums.Severity.High,
                 ConditionJson = $$"""{"type":"list","field":"toolName","listId":"{{listId}}","negated":true}""",
                 EvaluationType = "SingleEvent",
                 ActionsJson = "[]",

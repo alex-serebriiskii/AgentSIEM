@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Siem.Api.Alerting;
+using Siem.Api.Data.Enums;
 
 namespace Siem.Api.Notifications;
 
@@ -25,7 +26,7 @@ public class SlackNotificationChannel : INotificationChannel
     }
 
     public string Name => "slack";
-    public string MinimumSeverity => "high";
+    public Severity MinimumSeverity => Severity.High;
 
     public async Task SendAsync(EnrichedAlert alert, CancellationToken ct = default)
     {
@@ -33,9 +34,9 @@ public class SlackNotificationChannel : INotificationChannel
 
         var severityEmoji = alert.Severity switch
         {
-            "critical" => ":rotating_light:",
-            "high" => ":warning:",
-            "medium" => ":large_yellow_circle:",
+            Severity.Critical => ":rotating_light:",
+            Severity.High => ":warning:",
+            Severity.Medium => ":large_yellow_circle:",
             _ => ":information_source:"
         };
 
@@ -58,7 +59,7 @@ public class SlackNotificationChannel : INotificationChannel
                     type = "section",
                     fields = new[]
                     {
-                        new { type = "mrkdwn", text = $"*Severity:*\n{severityEmoji} {alert.Severity}" },
+                        new { type = "mrkdwn", text = $"*Severity:*\n{severityEmoji} {alert.Severity.ToStorageString()}" },
                         new { type = "mrkdwn", text = $"*Agent:*\n{alert.AgentName}" },
                         new { type = "mrkdwn", text = $"*Session events:*\n{alert.SessionEventCount}" },
                         new { type = "mrkdwn", text = $"*Recent alerts (24h):*\n{alert.RecentAlertCount}" },

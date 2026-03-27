@@ -1,3 +1,5 @@
+using Siem.Api.Data.Enums;
+
 namespace Siem.Api.Data.Entities;
 
 public class AlertEntity
@@ -5,8 +7,8 @@ public class AlertEntity
     public Guid AlertId { get; set; }
     public Guid RuleId { get; set; }
     public string RuleName { get; set; } = "";
-    public string Severity { get; set; } = "";
-    public string Status { get; set; } = "open";
+    public Severity Severity { get; set; } = Severity.Medium;
+    public AlertStatus Status { get; set; } = AlertStatus.Open;
     public string Title { get; set; } = "";
     public string? Detail { get; set; }
     public string Context { get; set; } = "{}";

@@ -47,7 +47,7 @@ public class RuleLoadingService
                     name:           dbRule.Name,
                     description:    dbRule.Description,
                     enabled:        dbRule.Enabled,
-                    severity:       SeverityMapping.FromString(dbRule.Severity),
+                    severity:       SeverityMapping.FromEnum(dbRule.Severity),
                     condition:      condition,
                     evaluationType: MapEvaluationType(dbRule),
                     actions:        MapActions(dbRule.ActionsJson),
