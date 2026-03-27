@@ -9,7 +9,6 @@ public static class AlertingServiceExtensions
         IConfiguration config)
     {
         // Configuration
-        services.Configure<AlertPipelineConfig>(config.GetSection("AlertPipeline"));
         services.AddSingleton(sp =>
             config.GetSection("AlertPipeline").Get<AlertPipelineConfig>()
             ?? new AlertPipelineConfig());

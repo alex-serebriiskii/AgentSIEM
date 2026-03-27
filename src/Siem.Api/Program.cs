@@ -5,6 +5,8 @@ using Siem.Api.Data;
 using Siem.Api.Hubs;
 using Siem.Api.Kafka;
 using Siem.Api.Services;
+using FluentValidation;
+using Siem.Api.Validators;
 using Siem.Rules.Core;
 using StackExchange.Redis;
 
@@ -29,16 +31,10 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 // ---------------------------------------------------------------------------
 // Core services
 // ---------------------------------------------------------------------------
-builder.Services.AddSingleton<ListCacheService>();
-builder.Services.AddSingleton<IListCacheService>(sp =>
-    sp.GetRequiredService<ListCacheService>());
+builder.Services.AddSingleton<IListCacheService, ListCacheService>();
 builder.Services.AddScoped<RuleLoadingService>();
-builder.Services.AddSingleton<RedisStateProvider>();
-builder.Services.AddSingleton<Evaluator.IStateProvider>(sp =>
-    sp.GetRequiredService<RedisStateProvider>());
-builder.Services.AddSingleton<CompiledRulesCache>();
-builder.Services.AddSingleton<ICompiledRulesCache>(sp =>
-    sp.GetRequiredService<CompiledRulesCache>());
+builder.Services.AddSingleton<Evaluator.IStateProvider, RedisStateProvider>();
+builder.Services.AddSingleton<ICompiledRulesCache, CompiledRulesCache>();
 var recompilationConfig = configuration.GetSection("Recompilation").Get<RecompilationConfig>()
     ?? new RecompilationConfig();
 builder.Services.AddSingleton(recompilationConfig);
@@ -96,8 +92,12 @@ Metrics.SuppressDefaultMetrics(new SuppressDefaultMetricOptions
 // ---------------------------------------------------------------------------
 // Web / API infrastructure
 // ---------------------------------------------------------------------------
+builder.Services.AddValidatorsFromAssemblyContaining<CreateRuleRequestValidator>();
 builder.Services.AddSignalR();
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<FluentValidationFilter>();
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();

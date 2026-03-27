@@ -20,6 +20,9 @@
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.6" />
     <!-- Metrics / Prometheus -->
     <PackageVersion Include="prometheus-net.AspNetCore" Version="8.2.1" />
+    <!-- Validation -->
+    <PackageVersion Include="FluentValidation" Version="11.11.0" />
+    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
     <!-- Testing -->
     <PackageVersion Include="TUnit" Version="0.12.6" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
