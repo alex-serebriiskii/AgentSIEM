@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Siem.Api.Data.Entities;
+using Siem.Api.Data.Enums;
 
 namespace Siem.Integration.Tests.Helpers;
 
@@ -15,7 +16,7 @@ public static class TestRuleFactory
         Guid? id = null,
         string name = "Test Rule",
         string? conditionJson = null,
-        string severity = "medium",
+        Severity severity = Severity.Medium,
         bool enabled = true)
     {
         var now = DateTime.UtcNow;
@@ -52,7 +53,7 @@ public static class TestRuleFactory
             Name = name,
             Description = "Integration test temporal rule",
             Enabled = true,
-            Severity = "high",
+            Severity = Severity.High,
             ConditionJson = conditionJson ?? FieldEqualsCondition,
             EvaluationType = "Temporal",
             TemporalConfig = $$"""{"windowSeconds":{{windowSeconds}},"threshold":{{threshold}},"aggregation":"{{aggregation}}","partitionField":"{{partitionField}}"}""",
@@ -86,7 +87,7 @@ public static class TestRuleFactory
             Name = name,
             Description = "Integration test sequence rule",
             Enabled = true,
-            Severity = "critical",
+            Severity = Severity.Critical,
             ConditionJson = """{"type":"exists","field":"eventType"}""",
             EvaluationType = "Sequence",
             SequenceConfig = $$"""{"maxSpanSeconds":{{maxSpanSeconds}},"steps":[{{stepsJson}}]}""",

@@ -2,6 +2,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Siem.Api.Data.Entities;
+using Siem.Api.Data.Enums;
 using Siem.Integration.Tests.Fixtures;
 using Siem.Integration.Tests.Helpers;
 
@@ -21,7 +22,7 @@ public class EfCoreCrudTests
     {
         var rule = TestRuleFactory.CreateSingleEventRule(
             name: "CRUD Test Rule",
-            severity: "high");
+            severity: Severity.High);
 
         await using (var db = IntegrationTestFixture.CreateDbContext())
         {
@@ -34,7 +35,7 @@ public class EfCoreCrudTests
             var loaded = await db.Rules.FindAsync(rule.Id);
             loaded.Should().NotBeNull();
             loaded!.Name.Should().Be("CRUD Test Rule");
-            loaded.Severity.Should().Be("high");
+            loaded.Severity.Should().Be(Severity.High);
             loaded.Enabled.Should().BeTrue();
             // PostgreSQL normalizes JSONB (adds spaces, may reorder keys), so compare semantically
             var actual = JsonDocument.Parse(loaded.ConditionJson).RootElement;
@@ -54,8 +55,8 @@ public class EfCoreCrudTests
             AlertId = Guid.NewGuid(),
             RuleId = Guid.NewGuid(),
             RuleName = "Test Rule",
-            Severity = "medium",
-            Status = "open",
+            Severity = Severity.Medium,
+            Status = AlertStatus.Open,
             Title = "Test Alert",
             Context = """{"agent":"test-agent","reason":"threshold exceeded"}""",
             AgentId = "agent-001",
@@ -178,8 +179,8 @@ public class EfCoreCrudTests
             AlertId = alertId,
             RuleId = Guid.NewGuid(),
             RuleName = "Test Rule",
-            Severity = "medium",
-            Status = "open",
+            Severity = Severity.Medium,
+            Status = AlertStatus.Open,
             Title = "Alert with events",
             Context = "{}",
             AgentId = "agent-001",

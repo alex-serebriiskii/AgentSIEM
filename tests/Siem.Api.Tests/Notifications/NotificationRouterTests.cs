@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Siem.Api.Alerting;
+using Siem.Api.Data.Enums;
 using Siem.Api.Notifications;
 
 namespace Siem.Api.Tests.Notifications;
@@ -19,10 +20,10 @@ public class NotificationRouterTests
 
     public NotificationRouterTests()
     {
-        _lowChannel = CreateMockChannel("low-channel", "low");
-        _mediumChannel = CreateMockChannel("medium-channel", "medium");
-        _highChannel = CreateMockChannel("high-channel", "high");
-        _criticalChannel = CreateMockChannel("critical-channel", "critical");
+        _lowChannel = CreateMockChannel("low-channel", Severity.Low);
+        _mediumChannel = CreateMockChannel("medium-channel", Severity.Medium);
+        _highChannel = CreateMockChannel("high-channel", Severity.High);
+        _criticalChannel = CreateMockChannel("critical-channel", Severity.Critical);
 
         _retryWorker = Substitute.For<INotificationRetryWorker>();
 
@@ -32,7 +33,7 @@ public class NotificationRouterTests
             NullLogger<NotificationRouter>.Instance);
     }
 
-    private static INotificationChannel CreateMockChannel(string name, string minimumSeverity)
+    private static INotificationChannel CreateMockChannel(string name, Severity minimumSeverity)
     {
         var channel = Substitute.For<INotificationChannel>();
         channel.Name.Returns(name);
@@ -40,7 +41,7 @@ public class NotificationRouterTests
         return channel;
     }
 
-    private static EnrichedAlert CreateAlert(string severity = "medium")
+    private static EnrichedAlert CreateAlert(Severity severity = Severity.Medium)
     {
         return new EnrichedAlert
         {
@@ -60,7 +61,7 @@ public class NotificationRouterTests
     [Test]
     public async Task RouteAsync_CriticalAlert_RoutesToAllChannels()
     {
-        var alert = CreateAlert("critical");
+        var alert = CreateAlert(Severity.Critical);
 
         await _router.RouteAsync(alert);
 
@@ -73,7 +74,7 @@ public class NotificationRouterTests
     [Test]
     public async Task RouteAsync_LowAlert_RoutesOnlyToLowChannel()
     {
-        var alert = CreateAlert("low");
+        var alert = CreateAlert(Severity.Low);
 
         await _router.RouteAsync(alert);
 
@@ -86,7 +87,7 @@ public class NotificationRouterTests
     [Test]
     public async Task RouteAsync_MediumAlert_SkipsHighAndCriticalChannels()
     {
-        var alert = CreateAlert("medium");
+        var alert = CreateAlert(Severity.Medium);
 
         await _router.RouteAsync(alert);
 
@@ -99,7 +100,7 @@ public class NotificationRouterTests
     [Test]
     public async Task RouteAsync_HighAlert_RoutesToLowMediumAndHigh()
     {
-        var alert = CreateAlert("high");
+        var alert = CreateAlert(Severity.High);
 
         await _router.RouteAsync(alert);
 
@@ -115,7 +116,7 @@ public class NotificationRouterTests
         _lowChannel.SendAsync(Arg.Any<EnrichedAlert>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new HttpRequestException("Connection refused"));
 
-        var alert = CreateAlert("low");
+        var alert = CreateAlert(Severity.Low);
 
         var act = () => _router.RouteAsync(alert);
 
@@ -128,7 +129,7 @@ public class NotificationRouterTests
         _lowChannel.SendAsync(Arg.Any<EnrichedAlert>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new HttpRequestException("Connection refused"));
 
-        var alert = CreateAlert("low");
+        var alert = CreateAlert(Severity.Low);
 
         await _router.RouteAsync(alert);
 
@@ -140,18 +141,6 @@ public class NotificationRouterTests
     }
 
     [Test]
-    public async Task RouteAsync_UnknownSeverity_TreatedAsLow()
-    {
-        var alert = CreateAlert("unknown");
-
-        await _router.RouteAsync(alert);
-
-        // Unknown severity maps to 0 (same as low), so only low channel matches
-        await _lowChannel.Received(1).SendAsync(alert, Arg.Any<CancellationToken>());
-        await _mediumChannel.DidNotReceive().SendAsync(alert, Arg.Any<CancellationToken>());
-    }
-
-    [Test]
     public async Task RouteAsync_NoMatchingChannels_CompletesSuccessfully()
     {
         // Router with only a critical channel
@@ -160,7 +149,7 @@ public class NotificationRouterTests
             _retryWorker,
             NullLogger<NotificationRouter>.Instance);
 
-        var alert = CreateAlert("low");
+        var alert = CreateAlert(Severity.Low);
 
         var act = () => criticalOnly.RouteAsync(alert);
 

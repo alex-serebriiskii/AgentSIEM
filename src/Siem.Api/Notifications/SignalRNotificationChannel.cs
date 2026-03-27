@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using Siem.Api.Alerting;
+using Siem.Api.Data.Enums;
 using Siem.Api.Hubs;
 
 namespace Siem.Api.Notifications;
@@ -19,7 +20,7 @@ public class SignalRNotificationChannel : INotificationChannel
     }
 
     public string Name => "signalr";
-    public string MinimumSeverity => "low";
+    public Severity MinimumSeverity => Severity.Low;
 
     public async Task SendAsync(EnrichedAlert alert, CancellationToken ct = default)
     {
@@ -28,7 +29,7 @@ public class SignalRNotificationChannel : INotificationChannel
             alertId = alert.AlertId,
             ruleId = alert.RuleId,
             ruleName = alert.RuleName,
-            severity = alert.Severity,
+            severity = alert.Severity.ToStorageString(),
             title = alert.Title,
             agentId = alert.AgentId,
             agentName = alert.AgentName,
@@ -46,7 +47,7 @@ public class SignalRNotificationChannel : INotificationChannel
             .SendAsync("AlertReceived", payload, ct);
 
         // Send to severity-specific group
-        await _hubContext.Clients.Group($"severity:{alert.Severity}")
+        await _hubContext.Clients.Group($"severity:{alert.Severity.ToStorageString()}")
             .SendAsync("AlertReceived", payload, ct);
     }
 }

@@ -1,6 +1,6 @@
 using System.Diagnostics.Metrics;
 using Siem.Api.Alerting;
-using Siem.Api.Shared;
+using Siem.Api.Data.Enums;
 
 namespace Siem.Api.Notifications;
 
@@ -33,10 +33,10 @@ public class NotificationRouter : INotificationRouter
 
     public async Task RouteAsync(EnrichedAlert alert, CancellationToken ct = default)
     {
-        var alertSeverity = SeverityMapping.ToOrder(alert.Severity);
+        var alertSeverity = alert.Severity.ToOrder();
 
         var matchingChannels = _channels
-            .Where(ch => alertSeverity >= SeverityMapping.ToOrder(ch.MinimumSeverity))
+            .Where(ch => alertSeverity >= ch.MinimumSeverity.ToOrder())
             .ToList();
 
         _logger.LogDebug(

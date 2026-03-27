@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Siem.Api.Controllers;
 using Siem.Api.Data.Entities;
+using Siem.Api.Data.Enums;
 using Siem.Api.Storage;
 using Siem.Integration.Tests.Fixtures;
 using Siem.Integration.Tests.Helpers;
@@ -136,8 +137,8 @@ public class AgentRiskSummaryIntegrationTests
             AlertId = Guid.NewGuid(),
             RuleId = Guid.NewGuid(),
             RuleName = "Test Rule",
-            Severity = "high",
-            Status = "open",
+            Severity = Severity.High,
+            Status = AlertStatus.Open,
             Title = "Test Alert",
             Detail = "Test detail",
             Context = "{}",

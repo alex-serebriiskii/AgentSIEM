@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Siem.Api.Data;
+using Siem.Api.Data.Enums;
 using Siem.Api.Models.Requests;
 using Siem.Api.Models.Responses;
 
@@ -15,11 +16,11 @@ public class AlertService(SiemDbContext db, PaginationConfig paginationConfig) :
 
         var query = db.Alerts.AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(status))
-            query = query.Where(a => a.Status == status);
+        if (!string.IsNullOrWhiteSpace(status) && EnumExtensions.TryParseAlertStatus(status, out var parsedStatus))
+            query = query.Where(a => a.Status == parsedStatus);
 
-        if (!string.IsNullOrWhiteSpace(severity))
-            query = query.Where(a => a.Severity == severity);
+        if (!string.IsNullOrWhiteSpace(severity) && EnumExtensions.TryParseSeverity(severity, out var parsedSeverity))
+            query = query.Where(a => a.Severity == parsedSeverity);
 
         if (!string.IsNullOrWhiteSpace(agentId))
             query = query.Where(a => a.AgentId == agentId);
@@ -60,10 +61,10 @@ public class AlertService(SiemDbContext db, PaginationConfig paginationConfig) :
         if (alert == null)
             return ServiceResult<AlertResponse>.NotFound();
 
-        if (alert.Status == "resolved")
-            return ServiceResult<AlertResponse>.Fail("Cannot acknowledge a resolved alert");
+        if (!EnumExtensions.IsValidTransition(alert.Status, AlertStatus.Acknowledged))
+            return ServiceResult<AlertResponse>.Fail($"Cannot transition from {alert.Status.ToStorageString()} to acknowledged");
 
-        alert.Status = "acknowledged";
+        alert.Status = AlertStatus.Acknowledged;
         alert.AcknowledgedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
@@ -77,7 +78,10 @@ public class AlertService(SiemDbContext db, PaginationConfig paginationConfig) :
         if (alert == null)
             return ServiceResult<AlertResponse>.NotFound();
 
-        alert.Status = "resolved";
+        if (!EnumExtensions.IsValidTransition(alert.Status, AlertStatus.Resolved))
+            return ServiceResult<AlertResponse>.Fail($"Cannot transition from {alert.Status.ToStorageString()} to resolved");
+
+        alert.Status = AlertStatus.Resolved;
         alert.ResolvedAt = DateTime.UtcNow;
         alert.ResolutionNote = request.ResolutionNote;
         await db.SaveChangesAsync(ct);

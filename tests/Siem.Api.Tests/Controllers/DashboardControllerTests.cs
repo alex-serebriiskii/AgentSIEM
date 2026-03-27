@@ -5,6 +5,7 @@ using Siem.Api.Data;
 using Siem.Api.Models.Requests;
 using Siem.Api.Models.Responses;
 using Siem.Api.Services;
+using Siem.Api.Data.Enums;
 using Siem.Api.Tests.Controllers.Helpers;
 
 namespace Siem.Api.Tests.Controllers;
@@ -28,10 +29,10 @@ public class DashboardControllerTests : IDisposable
     [Test]
     public async Task GetAlertDistribution_ReturnsGroupedBySeverityAndStatus()
     {
-        _db.Alerts.Add(TestEntityBuilders.CreateAlert(severity: "high", status: "open"));
-        _db.Alerts.Add(TestEntityBuilders.CreateAlert(severity: "high", status: "open"));
-        _db.Alerts.Add(TestEntityBuilders.CreateAlert(severity: "low", status: "open"));
-        _db.Alerts.Add(TestEntityBuilders.CreateAlert(severity: "high", status: "resolved"));
+        _db.Alerts.Add(TestEntityBuilders.CreateAlert(severity: Severity.High, status: AlertStatus.Open));
+        _db.Alerts.Add(TestEntityBuilders.CreateAlert(severity: Severity.High, status: AlertStatus.Open));
+        _db.Alerts.Add(TestEntityBuilders.CreateAlert(severity: Severity.Low, status: AlertStatus.Open));
+        _db.Alerts.Add(TestEntityBuilders.CreateAlert(severity: Severity.High, status: AlertStatus.Resolved));
         await _db.SaveChangesAsync();
 
         var result = await _controller.GetAlertDistribution(new DashboardQuery { Hours = 24 }, ct: CancellationToken.None);

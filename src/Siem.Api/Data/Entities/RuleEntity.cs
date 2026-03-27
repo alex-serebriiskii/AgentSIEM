@@ -1,3 +1,5 @@
+using Siem.Api.Data.Enums;
+
 namespace Siem.Api.Data.Entities;
 
 public class RuleEntity
@@ -6,7 +8,7 @@ public class RuleEntity
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
     public bool Enabled { get; set; } = true;
-    public string Severity { get; set; } = "medium";
+    public Severity Severity { get; set; } = Severity.Medium;
     public string ConditionJson { get; set; } = "{}";
     public string EvaluationType { get; set; } = "SingleEvent";
     public string? TemporalConfig { get; set; }

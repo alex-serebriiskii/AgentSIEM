@@ -2,6 +2,7 @@ namespace Siem.Api.Models.Responses;
 
 using System.Text.Json;
 using Siem.Api.Data.Entities;
+using Siem.Api.Data.Enums;
 
 public class RuleResponse
 {
@@ -28,7 +29,7 @@ public class RuleResponse
             Name = entity.Name,
             Description = entity.Description,
             Enabled = entity.Enabled,
-            Severity = entity.Severity,
+            Severity = entity.Severity.ToStorageString(),
             ConditionJson = JsonDocument.Parse(entity.ConditionJson).RootElement,
             EvaluationType = entity.EvaluationType,
             TemporalConfig = entity.TemporalConfig != null

@@ -1,3 +1,5 @@
+using Siem.Api.Data.Enums;
+
 namespace Siem.Api.Alerting;
 
 /// <summary>
@@ -9,7 +11,7 @@ public record EnrichedAlert
     public Guid AlertId { get; init; }
     public Guid RuleId { get; init; }
     public string RuleName { get; init; } = "";
-    public string Severity { get; init; } = "medium";
+    public Severity Severity { get; init; } = Severity.Medium;
     public string Title { get; init; } = "";
     public string Detail { get; init; } = "";
 

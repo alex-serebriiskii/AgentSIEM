@@ -2,6 +2,7 @@ namespace Siem.Api.Models.Responses;
 
 using System.Text.Json;
 using Siem.Api.Data.Entities;
+using Siem.Api.Data.Enums;
 
 public class AlertResponse
 {
@@ -33,8 +34,8 @@ public class AlertResponse
             AlertId = entity.AlertId,
             RuleId = entity.RuleId,
             RuleName = entity.RuleName,
-            Severity = entity.Severity,
-            Status = entity.Status,
+            Severity = entity.Severity.ToStorageString(),
+            Status = entity.Status.ToStorageString(),
             Title = entity.Title,
             Detail = entity.Detail,
             Context = JsonDocument.Parse(entity.Context).RootElement,

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Siem.Api.Data;
+using Siem.Api.Data.Enums;
 using Siem.Api.Models.Responses;
 
 namespace Siem.Api.Services;
@@ -77,7 +78,7 @@ public class DashboardService(SiemDbContext db) : IDashboardService
             .ToListAsync(ct);
 
         return results.Select(r => new AlertDistributionResult(
-            r.Severity, r.Status, r.Count)).ToList();
+            r.Severity.ToStorageString(), r.Status.ToStorageString(), r.Count)).ToList();
     }
 
     public async Task<IReadOnlyList<ToolUsageResult>> GetToolUsageAsync(

@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Siem.Api.Alerting;
+using Siem.Api.Data.Enums;
 using Siem.Integration.Tests.Fixtures;
 using Siem.Integration.Tests.Helpers;
 
@@ -20,7 +21,7 @@ public class AlertPersistenceIntegrationTests
         Guid? ruleId = null,
         string agentId = "test-agent",
         string sessionId = "test-session",
-        string severity = "medium",
+        Severity severity = Severity.Medium,
         Dictionary<string, object>? context = null,
         Dictionary<string, string>? labels = null)
     {
@@ -73,8 +74,8 @@ public class AlertPersistenceIntegrationTests
             saved.Should().NotBeNull();
             saved!.RuleId.Should().Be(enrichedAlert.RuleId);
             saved.RuleName.Should().Be("Test Rule");
-            saved.Severity.Should().Be("medium");
-            saved.Status.Should().Be("open");
+            saved.Severity.Should().Be(Severity.Medium);
+            saved.Status.Should().Be(AlertStatus.Open);
             saved.Title.Should().Be("Test Alert Title");
             saved.AgentId.Should().Be(enrichedAlert.AgentId);
             saved.SessionId.Should().Be(enrichedAlert.SessionId);

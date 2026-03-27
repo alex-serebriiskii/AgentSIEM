@@ -1,11 +1,11 @@
 using FluentValidation;
+using Siem.Api.Data.Enums;
 using Siem.Api.Models.Requests;
 
 namespace Siem.Api.Validators;
 
 public class CreateRuleRequestValidator : AbstractValidator<CreateRuleRequest>
 {
-    private static readonly string[] ValidSeverities = ["low", "medium", "high", "critical"];
     private static readonly string[] ValidEvaluationTypes = ["SingleEvent", "Temporal", "Sequence"];
 
     public CreateRuleRequestValidator()
@@ -14,8 +14,8 @@ public class CreateRuleRequestValidator : AbstractValidator<CreateRuleRequest>
             .NotEmpty().WithMessage("Name is required.");
 
         RuleFor(x => x.Severity)
-            .Must(s => ValidSeverities.Contains(s, StringComparer.OrdinalIgnoreCase))
-            .WithMessage($"Severity must be one of: {string.Join(", ", ValidSeverities)}.");
+            .Must(s => EnumExtensions.TryParseSeverity(s, out _))
+            .WithMessage("Severity must be one of: low, medium, high, critical.");
 
         RuleFor(x => x.EvaluationType)
             .Must(e => ValidEvaluationTypes.Contains(e, StringComparer.Ordinal))

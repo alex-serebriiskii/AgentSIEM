@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Siem.Api.Alerting;
+using Siem.Api.Data.Enums;
 
 namespace Siem.Api.Notifications;
 
@@ -28,7 +29,7 @@ public class PagerDutyNotificationChannel : INotificationChannel
     }
 
     public string Name => "pagerduty";
-    public string MinimumSeverity => "critical";
+    public Severity MinimumSeverity => Severity.Critical;
 
     public async Task SendAsync(EnrichedAlert alert, CancellationToken ct = default)
     {

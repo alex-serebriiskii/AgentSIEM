@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Siem.Api.Alerting;
+using Siem.Api.Data.Enums;
 
 namespace Siem.Api.Notifications;
 
@@ -25,7 +26,7 @@ public class WebhookNotificationChannel : INotificationChannel
     }
 
     public string Name => "webhook";
-    public string MinimumSeverity => "medium";
+    public Severity MinimumSeverity => Severity.Medium;
 
     public async Task SendAsync(EnrichedAlert alert, CancellationToken ct = default)
     {
@@ -38,7 +39,7 @@ public class WebhookNotificationChannel : INotificationChannel
                 alert_id = alert.AlertId,
                 rule_id = alert.RuleId,
                 rule_name = alert.RuleName,
-                severity = alert.Severity,
+                severity = alert.Severity.ToStorageString(),
                 title = alert.Title,
                 detail = alert.Detail,
                 agent_id = alert.AgentId,
