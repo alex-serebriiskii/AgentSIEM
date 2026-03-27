@@ -38,6 +38,8 @@ builder.Services.AddSingleton<ICompiledRulesCache, CompiledRulesCache>();
 var recompilationConfig = configuration.GetSection("Recompilation").Get<RecompilationConfig>()
     ?? new RecompilationConfig();
 builder.Services.AddSingleton(recompilationConfig);
+builder.Services.AddSingleton<ICompilationNotifier, CompilationNotifier>();
+builder.Services.AddSingleton<IRuleCompilationOrchestrator, RuleCompilationOrchestrator>();
 builder.Services.AddSingleton<RecompilationCoordinator>();
 builder.Services.AddSingleton<IRecompilationCoordinator>(sp =>
     sp.GetRequiredService<RecompilationCoordinator>());

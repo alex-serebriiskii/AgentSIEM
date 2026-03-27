@@ -10,6 +10,17 @@ module Compiler =
     /// External dependency: resolves a managed list ID to its current members.
     type ListResolver = Guid -> Set<string>
 
+    /// Attempt to convert an arbitrary value to a double, returning None on failure.
+    let private tryToDouble (v: obj) : float option =
+        match v with
+        | :? float as f -> Some f
+        | :? int as i -> Some (float i)
+        | :? int64 as i -> Some (float i)
+        | _ ->
+            match Double.TryParse(v.ToString(), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture) with
+            | true, d -> Some d
+            | false, _ -> None
+
     /// Compare a resolved field value against a JSON element using the given operator.
     let private compareField (op: ComparisonOp) (fieldVal: obj option) (target: JsonElement) : bool =
         match fieldVal with
@@ -23,10 +34,10 @@ module Compiler =
             | StartsWith -> strVal.StartsWith(target.GetString(), StringComparison.OrdinalIgnoreCase)
             | EndsWith   -> strVal.EndsWith(target.GetString(), StringComparison.OrdinalIgnoreCase)
             | Regex      -> Text.RegularExpressions.Regex.IsMatch(strVal, target.GetString())
-            | Gt  -> Convert.ToDouble(v) >  target.GetDouble()
-            | Lt  -> Convert.ToDouble(v) <  target.GetDouble()
-            | Gte -> Convert.ToDouble(v) >= target.GetDouble()
-            | Lte -> Convert.ToDouble(v) <= target.GetDouble()
+            | Gt  -> match tryToDouble v with Some d -> d >  target.GetDouble() | None -> false
+            | Lt  -> match tryToDouble v with Some d -> d <  target.GetDouble() | None -> false
+            | Gte -> match tryToDouble v with Some d -> d >= target.GetDouble() | None -> false
+            | Lte -> match tryToDouble v with Some d -> d <= target.GetDouble() | None -> false
 
     /// Compile a condition tree into an executable predicate.
     /// Called once per rule at load time, not per event.
@@ -43,8 +54,9 @@ module Compiler =
             fun evt ->
                 match resolve field evt with
                 | Some v ->
-                    let numVal = Convert.ToDouble(v)
-                    if above then numVal > limit else numVal < limit
+                    match tryToDouble v with
+                    | Some numVal -> if above then numVal > limit else numVal < limit
+                    | None -> false
                 | None -> false
 
         | InList (field, listId, negated) ->

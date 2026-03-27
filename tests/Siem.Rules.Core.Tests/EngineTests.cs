@@ -112,4 +112,45 @@ public class EngineTests
 
         compiledRules.Length.Should().Be(1);
     }
+
+    [Test]
+    public async Task EvaluateEvent_OneRuleThrows_OtherRulesStillEvaluate()
+    {
+        var stateProvider = Substitute.For<Evaluator.IStateProvider>();
+
+        // A valid rule that matches
+        var matchingRule = CreateRuleDefinition(
+            Condition.NewField("eventType", ComparisonOp.Eq, JsonString("tool_invocation")),
+            severity: Severity.High);
+        var compiledRules = Engine.compileAllRules(EmptyListResolver(),
+            ListModule.OfSeq(new[] { matchingRule }));
+
+        // Create a faulty compiled rule with a predicate that throws
+        var faultyRule = new Compiler.CompiledRule(
+            ruleId: Guid.NewGuid(),
+            severity: Severity.Critical,
+            predicate: FuncConvert.FromFunc<AgentEvent, bool>(_ => throw new InvalidOperationException("boom")),
+            evaluationType: EvaluationType.SingleEvent,
+            compiledSteps: FSharpOption<FSharpList<Tuple<string, FSharpFunc<AgentEvent, bool>>>>.None,
+            actions: FSharpList<RuleAction>.Empty);
+
+        var allRules = ListModule.OfSeq(new[] { faultyRule }.Concat(compiledRules));
+
+        var engine = new Engine.RuleEngine(
+            compiledRules: allRules,
+            state: stateProvider);
+
+        var evt = CreateEvent(eventType: "tool_invocation");
+
+        // Act — should not throw despite the faulty rule
+        var results = await FSharpAsync.StartAsTask(
+            Engine.evaluateEvent(engine, evt),
+            FSharpOption<TaskCreationOptions>.None,
+            FSharpOption<CancellationToken>.None);
+
+        // Assert — the valid matching rule should still return its result
+        var resultList = results.ToList();
+        resultList.Should().HaveCount(1);
+        resultList[0].Severity.Should().Be(Severity.High);
+    }
 }

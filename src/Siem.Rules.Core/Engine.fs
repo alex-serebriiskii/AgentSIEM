@@ -17,12 +17,21 @@ module Engine =
         async {
             let! results =
                 engine.CompiledRules
-                |> List.map (fun rule -> evaluate engine.State rule evt)
+                |> List.map (fun rule ->
+                    async {
+                        let! outcome = Async.Catch(evaluate engine.State rule evt)
+                        match outcome with
+                        | Choice1Of2 result -> return Some result
+                        | Choice2Of2 _      -> return None
+                    })
                 |> Async.Parallel
 
             return
                 results
-                |> Array.filter (fun r -> r.Triggered)
+                |> Array.choose (fun opt ->
+                    match opt with
+                    | Some r when r.Triggered -> Some r
+                    | _ -> None)
                 |> Array.toList
         }
 

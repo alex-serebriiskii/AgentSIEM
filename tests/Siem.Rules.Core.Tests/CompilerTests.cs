@@ -378,4 +378,34 @@ public class CompilerTests
 
         predicate.Invoke(evt).Should().BeFalse();
     }
+
+    [Test]
+    public async Task Compile_FieldCondition_Gt_NonNumericValue_ReturnsFalse()
+    {
+        var condition = Condition.NewField("toolName", ComparisonOp.Gt, JsonNumber(100));
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(toolName: "not-a-number");
+
+        predicate.Invoke(evt).Should().BeFalse();
+    }
+
+    [Test]
+    public async Task Compile_Threshold_NonNumericValue_ReturnsFalse()
+    {
+        var condition = Condition.NewThreshold("toolName", 100.0, true);
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(toolName: "not-a-number");
+
+        predicate.Invoke(evt).Should().BeFalse();
+    }
+
+    [Test]
+    public async Task Compile_FieldCondition_Gt_ValidNumeric_StillWorks()
+    {
+        var condition = Condition.NewField("latencyMs", ComparisonOp.Gt, JsonNumber(100));
+        var predicate = Compiler.compile(EmptyListResolver(), condition);
+        var evt = CreateEvent(latencyMs: 200.0);
+
+        predicate.Invoke(evt).Should().BeTrue();
+    }
 }
