@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Siem.Api.Models.Requests;
 using Siem.Api.Services;
 
 namespace Siem.Api.Controllers;
@@ -13,11 +14,10 @@ public class DashboardController(IDashboardService dashboardService) : Controlle
     /// </summary>
     [HttpGet("top-agents")]
     public async Task<IActionResult> GetTopAgents(
-        [FromQuery] int hours = 24,
-        [FromQuery] int limit = 20,
+        [FromQuery] DashboardQuery query,
         CancellationToken ct = default)
     {
-        var results = await dashboardService.GetTopAgentsAsync(hours, limit, ct);
+        var results = await dashboardService.GetTopAgentsAsync(query.Hours, query.Limit, ct);
         return Ok(results);
     }
 
@@ -27,10 +27,10 @@ public class DashboardController(IDashboardService dashboardService) : Controlle
     /// </summary>
     [HttpGet("event-volume")]
     public async Task<IActionResult> GetEventVolume(
-        [FromQuery] int hours = 24,
+        [FromQuery] DashboardQuery query,
         CancellationToken ct = default)
     {
-        var results = await dashboardService.GetEventVolumeAsync(hours, ct);
+        var results = await dashboardService.GetEventVolumeAsync(query.Hours, ct);
         return Ok(results);
     }
 
@@ -40,10 +40,10 @@ public class DashboardController(IDashboardService dashboardService) : Controlle
     /// </summary>
     [HttpGet("alert-distribution")]
     public async Task<IActionResult> GetAlertDistribution(
-        [FromQuery] int hours = 24,
+        [FromQuery] DashboardQuery query,
         CancellationToken ct = default)
     {
-        var results = await dashboardService.GetAlertDistributionAsync(hours, ct);
+        var results = await dashboardService.GetAlertDistributionAsync(query.Hours, ct);
         return Ok(results);
     }
 
@@ -53,11 +53,10 @@ public class DashboardController(IDashboardService dashboardService) : Controlle
     /// </summary>
     [HttpGet("tool-usage")]
     public async Task<IActionResult> GetToolUsage(
-        [FromQuery] int hours = 24,
-        [FromQuery] int limit = 20,
+        [FromQuery] DashboardQuery query,
         CancellationToken ct = default)
     {
-        var results = await dashboardService.GetToolUsageAsync(hours, limit, ct);
+        var results = await dashboardService.GetToolUsageAsync(query.Hours, query.Limit, ct);
         return Ok(results);
     }
 }

@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Siem.Api.Controllers;
 using Siem.Api.Data;
+using Siem.Api.Models.Requests;
 using Siem.Api.Models.Responses;
 using Siem.Api.Services;
 using Siem.Api.Tests.Controllers.Helpers;
@@ -33,7 +34,7 @@ public class DashboardControllerTests : IDisposable
         _db.Alerts.Add(TestEntityBuilders.CreateAlert(severity: "high", status: "resolved"));
         await _db.SaveChangesAsync();
 
-        var result = await _controller.GetAlertDistribution(hours: 24, ct: CancellationToken.None);
+        var result = await _controller.GetAlertDistribution(new DashboardQuery { Hours = 24 }, ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         var items = ok.Value.Should().BeAssignableTo<IReadOnlyList<AlertDistributionResult>>().Subject;
@@ -52,7 +53,7 @@ public class DashboardControllerTests : IDisposable
         _db.Alerts.Add(TestEntityBuilders.CreateAlert(triggeredAt: DateTime.UtcNow.AddHours(-48)));
         await _db.SaveChangesAsync();
 
-        var result = await _controller.GetAlertDistribution(hours: 24, ct: CancellationToken.None);
+        var result = await _controller.GetAlertDistribution(new DashboardQuery { Hours = 24 }, ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         var items = ok.Value.Should().BeAssignableTo<IReadOnlyList<AlertDistributionResult>>().Subject;
@@ -65,7 +66,7 @@ public class DashboardControllerTests : IDisposable
     [Test]
     public async Task GetAlertDistribution_NoAlerts_ReturnsEmptyList()
     {
-        var result = await _controller.GetAlertDistribution(ct: CancellationToken.None);
+        var result = await _controller.GetAlertDistribution(new DashboardQuery(), ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         var items = ok.Value.Should().BeAssignableTo<IReadOnlyList<AlertDistributionResult>>().Subject;
@@ -80,7 +81,7 @@ public class DashboardControllerTests : IDisposable
     [Test]
     public async Task GetTopAgents_EmptyData_ReturnsEmptyList()
     {
-        var result = await _controller.GetTopAgents(ct: CancellationToken.None);
+        var result = await _controller.GetTopAgents(new DashboardQuery(), ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         var items = ok.Value.Should().BeAssignableTo<IReadOnlyList<TopAgentResult>>().Subject;
@@ -90,7 +91,7 @@ public class DashboardControllerTests : IDisposable
     [Test]
     public async Task GetEventVolume_EmptyData_ReturnsEmptyList()
     {
-        var result = await _controller.GetEventVolume(ct: CancellationToken.None);
+        var result = await _controller.GetEventVolume(new DashboardQuery(), ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         var items = ok.Value.Should().BeAssignableTo<IReadOnlyList<EventVolumeResult>>().Subject;
@@ -100,7 +101,7 @@ public class DashboardControllerTests : IDisposable
     [Test]
     public async Task GetToolUsage_EmptyData_ReturnsEmptyList()
     {
-        var result = await _controller.GetToolUsage(ct: CancellationToken.None);
+        var result = await _controller.GetToolUsage(new DashboardQuery(), ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         var items = ok.Value.Should().BeAssignableTo<IReadOnlyList<ToolUsageResult>>().Subject;

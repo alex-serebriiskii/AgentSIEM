@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Siem.Api.Controllers;
+using Siem.Api.Models.Requests;
 using Siem.Api.Storage;
 using Siem.Integration.Tests.Fixtures;
 using Siem.Integration.Tests.Helpers;
@@ -30,7 +31,7 @@ public class SessionTimelineIntegrationTests
         await using var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
         var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource, new Siem.Api.Services.PaginationConfig()));
 
-        var result = await controller.GetSessionTimeline(sessionId, ct: CancellationToken.None);
+        var result = await controller.GetSessionTimeline(sessionId, new SessionTimelineQuery(), ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -70,7 +71,7 @@ public class SessionTimelineIntegrationTests
         await using var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
         var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource, new Siem.Api.Services.PaginationConfig()));
 
-        var result = await controller.GetSessionTimeline("nonexistent-session", ct: CancellationToken.None);
+        var result = await controller.GetSessionTimeline("nonexistent-session", new SessionTimelineQuery(), ct: CancellationToken.None);
 
         result.Should().BeOfType<NotFoundResult>();
     }
@@ -86,7 +87,7 @@ public class SessionTimelineIntegrationTests
         await using var dataSource = NpgsqlDataSource.Create(IntegrationTestFixture.TimescaleConnectionString);
         var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource, new Siem.Api.Services.PaginationConfig()));
 
-        var result = await controller.GetSessionTimeline(sessionId, limit: 5, ct: CancellationToken.None);
+        var result = await controller.GetSessionTimeline(sessionId, new SessionTimelineQuery { Limit = 5 }, ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         var json = System.Text.Json.JsonSerializer.Serialize(ok.Value);
@@ -108,11 +109,11 @@ public class SessionTimelineIntegrationTests
         var controller = new SessionsController(new Siem.Api.Services.SessionService(db, dataSource, new Siem.Api.Services.PaginationConfig()));
 
         // Warm up
-        await controller.GetSessionTimeline(sessionId, ct: CancellationToken.None);
+        await controller.GetSessionTimeline(sessionId, new SessionTimelineQuery(), ct: CancellationToken.None);
 
         // Timed run
         var sw = Stopwatch.StartNew();
-        var result = await controller.GetSessionTimeline(sessionId, ct: CancellationToken.None);
+        var result = await controller.GetSessionTimeline(sessionId, new SessionTimelineQuery(), ct: CancellationToken.None);
         sw.Stop();
 
         result.Should().BeOfType<OkObjectResult>();

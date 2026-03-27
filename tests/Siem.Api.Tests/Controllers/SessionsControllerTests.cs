@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Siem.Api.Controllers;
 using Siem.Api.Data;
+using Siem.Api.Models.Requests;
 using Siem.Api.Models.Responses;
 using Siem.Api.Services;
 using Siem.Api.Tests.Controllers.Helpers;
@@ -103,7 +104,7 @@ public class SessionsControllerTests : IDisposable
     [Test]
     public async Task GetSessionTimeline_NonexistentSession_ReturnsNotFound()
     {
-        var result = await _controller.GetSessionTimeline("nonexistent", ct: CancellationToken.None);
+        var result = await _controller.GetSessionTimeline("nonexistent", new SessionTimelineQuery(), ct: CancellationToken.None);
         result.Should().BeOfType<NotFoundResult>();
     }
 
@@ -117,7 +118,7 @@ public class SessionsControllerTests : IDisposable
         _db.AgentSessions.Add(session);
         await _db.SaveChangesAsync();
 
-        var act = () => _controller.GetSessionTimeline("sess-timeline", ct: CancellationToken.None);
+        var act = () => _controller.GetSessionTimeline("sess-timeline", new SessionTimelineQuery(), ct: CancellationToken.None);
         await act.Should().ThrowAsync<NullReferenceException>();
     }
 }

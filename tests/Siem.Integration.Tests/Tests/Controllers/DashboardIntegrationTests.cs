@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Siem.Api.Controllers;
 using Siem.Api.Data.Entities;
+using Siem.Api.Models.Requests;
 using Siem.Api.Storage;
 using Siem.Integration.Tests.Fixtures;
 using Siem.Integration.Tests.Helpers;
@@ -33,7 +34,7 @@ public class DashboardIntegrationTests
         await using var db = IntegrationTestFixture.CreateDbContext();
         var controller = new DashboardController(new Siem.Api.Services.DashboardService(db));
 
-        var result = await controller.GetTopAgents(hours: 24, limit: 10, ct: CancellationToken.None);
+        var result = await controller.GetTopAgents(new DashboardQuery { Hours = 24, Limit = 10 }, ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         var json = JsonSerializer.Serialize(ok.Value);
@@ -58,7 +59,7 @@ public class DashboardIntegrationTests
         await using var db = IntegrationTestFixture.CreateDbContext();
         var controller = new DashboardController(new Siem.Api.Services.DashboardService(db));
 
-        var result = await controller.GetEventVolume(hours: 24, ct: CancellationToken.None);
+        var result = await controller.GetEventVolume(new DashboardQuery { Hours = 24 }, ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         var json = JsonSerializer.Serialize(ok.Value);
@@ -84,7 +85,7 @@ public class DashboardIntegrationTests
         await db.SaveChangesAsync();
 
         var controller = new DashboardController(new Siem.Api.Services.DashboardService(db));
-        var result = await controller.GetAlertDistribution(hours: 24, ct: CancellationToken.None);
+        var result = await controller.GetAlertDistribution(new DashboardQuery { Hours = 24 }, ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         var json = JsonSerializer.Serialize(ok.Value);
@@ -104,7 +105,7 @@ public class DashboardIntegrationTests
         await using var db = IntegrationTestFixture.CreateDbContext();
         var controller = new DashboardController(new Siem.Api.Services.DashboardService(db));
 
-        var result = await controller.GetToolUsage(hours: 24, limit: 10, ct: CancellationToken.None);
+        var result = await controller.GetToolUsage(new DashboardQuery { Hours = 24, Limit = 10 }, ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         var json = JsonSerializer.Serialize(ok.Value);
@@ -128,7 +129,7 @@ public class DashboardIntegrationTests
         await using var db = IntegrationTestFixture.CreateDbContext();
         var controller = new DashboardController(new Siem.Api.Services.DashboardService(db));
 
-        var result = await controller.GetTopAgents(hours: 24, ct: CancellationToken.None);
+        var result = await controller.GetTopAgents(new DashboardQuery { Hours = 24 }, ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         var json = JsonSerializer.Serialize(ok.Value);

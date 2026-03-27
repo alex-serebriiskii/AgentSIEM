@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Siem.Api.Models.Requests;
 using Siem.Api.Services;
 
 namespace Siem.Api.Controllers;
@@ -41,10 +42,10 @@ public class SessionsController(ISessionService sessionService) : ControllerBase
     [HttpGet("{id}/timeline")]
     public async Task<IActionResult> GetSessionTimeline(
         [FromRoute] string id,
-        [FromQuery] int limit = 1000,
+        [FromQuery] SessionTimelineQuery query,
         CancellationToken ct = default)
     {
-        var result = await sessionService.GetTimelineAsync(id, limit, ct);
+        var result = await sessionService.GetTimelineAsync(id, query.Limit, ct);
         if (result.IsNotFound) return NotFound();
 
         return Ok(result.Value);
