@@ -93,6 +93,26 @@ dotnet run --project tests/Siem.Integration.Tests
 
 The Kafka consumer rebalance survival test requires a running `docker compose` environment. See [RebalanceTest.md](RebalanceTest.md) for the step-by-step procedure.
 
+## Run pre-built image (for testers)
+
+No source code needed. Download the compose file and run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/alex-serebriiskii/AgentSIEM/main/docker-compose.ghcr.yml -o docker-compose.yml
+docker compose up
+```
+
+The API will be available at `http://localhost:5000` with Swagger at `/swagger`.
+
+To pin a specific version instead of `latest`:
+
+```bash
+# Edit docker-compose.yml and change the siem-api image tag:
+# image: ghcr.io/alex-serebriiskii/agentsiem:<git-sha-or-version>
+```
+
+The published image supports both `linux/amd64` and `linux/arm64` (Apple Silicon).
+
 ## CI/CD
 
 GitHub Actions runs on push/PR to `main`:
@@ -100,7 +120,7 @@ GitHub Actions runs on push/PR to `main`:
 1. Build the solution
 2. Run all unit tests
 3. Run integration tests (Testcontainers spins up TimescaleDB, Redis, Kafka)
-4. Build the Docker image
+4. Build and push multi-arch Docker image to [GHCR](https://ghcr.io/alex-serebriiskii/agentsiem) (main branch only)
 
 ## Project Structure
 
