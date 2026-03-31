@@ -171,23 +171,22 @@ public class EngineControllerIntegrationTests
         CreateControllerWithCoordinator()
     {
         var services = new ServiceCollection();
-        services.AddDbContext<SiemDbContext>(options =>
+        services.AddDbContextFactory<SiemDbContext>(options =>
             options.UseNpgsql(IntegrationTestFixture.TimescaleConnectionString));
-        services.AddScoped<RuleLoadingService>();
-        services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
-        services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
         var provider = services.BuildServiceProvider();
 
-        var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
+        var dbFactory = provider.GetRequiredService<IDbContextFactory<SiemDbContext>>();
         var listCache = new ListCacheService(
-            scopeFactory, NullLogger<ListCacheService>.Instance);
+            dbFactory, NullLogger<ListCacheService>.Instance);
+        var ruleLoader = new RuleLoadingService(
+            dbFactory, NullLogger<RuleLoadingService>.Instance);
         var stateProvider = new RedisStateProvider(IntegrationTestFixture.RedisMultiplexer);
         var rulesCache = new CompiledRulesCache(stateProvider);
 
         var config = new RecompilationConfig();
         var notifier = new CompilationNotifier(config);
         var orchestrator = new RuleCompilationOrchestrator(
-            listCache, rulesCache, scopeFactory, notifier,
+            listCache, rulesCache, ruleLoader, notifier,
             NullLogger<RuleCompilationOrchestrator>.Instance);
         var coordinator = new RecompilationCoordinator(
             orchestrator, notifier,

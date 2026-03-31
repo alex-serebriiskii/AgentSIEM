@@ -3,11 +3,12 @@ using System.Text;
 using System.Text.Json;
 using Confluent.Kafka;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using NSubstitute;
-using Microsoft.Extensions.DependencyInjection;
 using Siem.Api.Alerting;
+using Siem.Api.Data;
 using Siem.Api.Kafka;
 using Siem.Api.Normalization;
 using Siem.Api.Services;
@@ -22,6 +23,11 @@ namespace Siem.Integration.Tests.Tests.Kafka;
 public class EventProcessingPipelineTests
 {
     private const string TestTopic = "pipeline-test-events";
+
+    private class TestDbContextFactory : IDbContextFactory<SiemDbContext>
+    {
+        public SiemDbContext CreateDbContext() => IntegrationTestFixture.CreateDbContext();
+    }
 
     [Before(Test)]
     public async Task Cleanup()
@@ -453,16 +459,16 @@ public class EventProcessingPipelineTests
         var rulesCache = new CompiledRulesCache(stateProvider);
 
         // Load rules from DB, compile, and swap into cache
-        await using var db = IntegrationTestFixture.CreateDbContext();
-        var ruleLoader = new RuleLoadingService(db, NullLogger<RuleLoadingService>.Instance);
+        var dbFactory = new TestDbContextFactory();
+        var ruleLoader = new RuleLoadingService(dbFactory, NullLogger<RuleLoadingService>.Instance);
         var rules = await ruleLoader.LoadEnabledRulesAsync();
         var listResolver = Microsoft.FSharp.Core.FuncConvert.FromFunc<Guid, Microsoft.FSharp.Collections.FSharpSet<string>>(
             _ => Microsoft.FSharp.Collections.SetModule.Empty<string>());
         var compiledRules = Engine.compileAllRules(listResolver, rules.ToFSharpList());
 
         // We need a ListCacheService for SwapEngine — create a minimal one
-        var scopeFactory = Substitute.For<IServiceScopeFactory>();
-        var listCache = new ListCacheService(scopeFactory, NullLogger<ListCacheService>.Instance);
+        var listCache = new ListCacheService(
+            Substitute.For<IDbContextFactory<SiemDbContext>>(), NullLogger<ListCacheService>.Instance);
         rulesCache.SwapEngine(compiledRules, listCache);
 
         var alertPipeline = Substitute.For<IAlertPipeline>();

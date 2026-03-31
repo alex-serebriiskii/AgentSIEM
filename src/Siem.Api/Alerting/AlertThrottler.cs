@@ -34,24 +34,8 @@ public class AlertThrottler : IAlertThrottler
         try
         {
             var key = RedisKeys.AlertThrottle(ruleId);
-            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            var windowStart = now - (long)_window.TotalMilliseconds;
-
-            var transaction = _redis.CreateTransaction();
-
-            // Add this alert attempt
-            _ = transaction.SortedSetAddAsync(key, now.ToString(), now);
-
-            // Remove entries outside window
-            _ = transaction.SortedSetRemoveRangeByScoreAsync(
-                key, double.NegativeInfinity, windowStart);
-
-            // Set TTL to twice the window to allow cleanup
-            _ = transaction.KeyExpireAsync(key, _window + _window);
-
-            await transaction.ExecuteAsync();
-
-            var count = await _redis.SortedSetLengthAsync(key);
+            var count = await RedisSlidingWindowHelper.IncrementAsync(
+                _redis, key, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(), _window);
             return count > _maxPerWindow;
         }
         catch (RedisConnectionException ex)

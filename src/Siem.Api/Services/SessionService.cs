@@ -56,24 +56,17 @@ public class SessionService(SiemDbContext db, NpgsqlDataSource dataSource, Pagin
         {
             events.Add(new SessionTimelineEventResponse
             {
-                EventId = reader.GetGuid(reader.GetOrdinal("event_id")),
-                Timestamp = reader.GetDateTime(reader.GetOrdinal("timestamp")),
-                EventType = reader.GetString(reader.GetOrdinal("event_type")),
-                AgentId = reader.GetString(reader.GetOrdinal("agent_id")),
-                ToolName = reader.IsDBNull(reader.GetOrdinal("tool_name"))
-                    ? null : reader.GetString(reader.GetOrdinal("tool_name")),
-                ModelId = reader.IsDBNull(reader.GetOrdinal("model_id"))
-                    ? null : reader.GetString(reader.GetOrdinal("model_id")),
-                InputTokens = reader.IsDBNull(reader.GetOrdinal("input_tokens"))
-                    ? null : reader.GetInt32(reader.GetOrdinal("input_tokens")),
-                OutputTokens = reader.IsDBNull(reader.GetOrdinal("output_tokens"))
-                    ? null : reader.GetInt32(reader.GetOrdinal("output_tokens")),
-                LatencyMs = reader.IsDBNull(reader.GetOrdinal("latency_ms"))
-                    ? null : reader.GetDouble(reader.GetOrdinal("latency_ms")),
-                AlertIds = reader.IsDBNull(reader.GetOrdinal("alert_ids"))
-                    ? [] : (Guid[])reader.GetValue(reader.GetOrdinal("alert_ids")),
-                AlertSeverities = reader.IsDBNull(reader.GetOrdinal("alert_severities"))
-                    ? [] : (string[])reader.GetValue(reader.GetOrdinal("alert_severities"))
+                EventId = reader.Get<Guid>("event_id"),
+                Timestamp = reader.Get<DateTime>("timestamp"),
+                EventType = reader.Get<string>("event_type"),
+                AgentId = reader.Get<string>("agent_id"),
+                ToolName = reader.GetStringOrNull("tool_name"),
+                ModelId = reader.GetStringOrNull("model_id"),
+                InputTokens = reader.GetOrDefault<int>("input_tokens"),
+                OutputTokens = reader.GetOrDefault<int>("output_tokens"),
+                LatencyMs = reader.GetOrDefault<double>("latency_ms"),
+                AlertIds = reader.GetOrFallback<Guid[]>("alert_ids", []),
+                AlertSeverities = reader.GetOrFallback<string[]>("alert_severities", [])
             });
         }
 

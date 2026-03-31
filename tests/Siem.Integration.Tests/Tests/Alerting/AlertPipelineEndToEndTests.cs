@@ -62,11 +62,12 @@ public class AlertPipelineEndToEndTests
             NullLogger<NotificationRouter>.Instance);
 
         var scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
+        var processingScopeFactory = new AlertProcessingScopeFactory(scopeFactory);
 
         return new AlertPipeline(
             dedup,
             throttler,
-            scopeFactory,
+            processingScopeFactory,
             router,
             NullLogger<AlertPipeline>.Instance);
     }

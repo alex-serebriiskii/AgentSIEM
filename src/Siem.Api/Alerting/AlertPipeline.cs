@@ -1,7 +1,6 @@
 using System.Diagnostics.Metrics;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Extensions.DependencyInjection;
 using Siem.Api.Notifications;
 using Siem.Rules.Core;
 using static Siem.Rules.Core.Evaluator;
@@ -10,13 +9,13 @@ namespace Siem.Api.Alerting;
 
 /// <summary>
 /// 6-stage alert pipeline orchestrator: dedup -> throttle -> suppress -> enrich -> persist -> route.
-/// Uses IServiceScopeFactory to resolve scoped services (enricher, persistence, suppression checker).
+/// Uses IAlertProcessingScopeFactory to resolve scoped services (enricher, persistence, suppression checker).
 /// </summary>
 public class AlertPipeline : IAlertPipeline
 {
     private readonly IAlertDeduplicator _dedup;
     private readonly IAlertThrottler _throttler;
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IAlertProcessingScopeFactory _scopeFactory;
     private readonly INotificationRouter _router;
     private readonly ILogger<AlertPipeline> _logger;
 
@@ -37,7 +36,7 @@ public class AlertPipeline : IAlertPipeline
     public AlertPipeline(
         IAlertDeduplicator dedup,
         IAlertThrottler throttler,
-        IServiceScopeFactory scopeFactory,
+        IAlertProcessingScopeFactory scopeFactory,
         INotificationRouter router,
         ILogger<AlertPipeline> logger)
     {
@@ -75,12 +74,9 @@ public class AlertPipeline : IAlertPipeline
 
         // Stages 3-5 require scoped services (DbContext)
         using var scope = _scopeFactory.CreateScope();
-        var suppression = scope.ServiceProvider.GetRequiredService<SuppressionChecker>();
-        var enricher = scope.ServiceProvider.GetRequiredService<AlertEnricher>();
-        var persistence = scope.ServiceProvider.GetRequiredService<AlertPersistence>();
 
         // Stage 3: Suppression
-        if (await suppression.IsSuppressedAsync(result.RuleId, evt.AgentId, ct))
+        if (await scope.Suppression.IsSuppressedAsync(result.RuleId, evt.AgentId, ct))
         {
             AlertsSuppressed.Add(1);
             _logger.LogDebug("Alert suppressed: rule={RuleId} agent={AgentId}",
@@ -89,10 +85,10 @@ public class AlertPipeline : IAlertPipeline
         }
 
         // Stage 4: Enrich
-        var enrichedAlert = await enricher.EnrichAsync(result, evt, ct);
+        var enrichedAlert = await scope.Enricher.EnrichAsync(result, evt, ct);
 
         // Stage 5: Persist
-        var alertId = await persistence.SaveAsync(enrichedAlert, evt, ct);
+        var alertId = await scope.Persistence.SaveAsync(enrichedAlert, evt, ct);
         enrichedAlert = enrichedAlert with { AlertId = alertId };
 
         AlertsCreated.Add(1, new KeyValuePair<string, object?>("severity",

@@ -8,6 +8,7 @@ using Siem.Api.Services;
 using FluentValidation;
 using Siem.Api.Validators;
 using Siem.Rules.Core;
+using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,7 +21,7 @@ builder.Services.AddNpgsqlDataSource(
     configuration.GetConnectionString("TimescaleDb")
         ?? throw new InvalidOperationException("Missing connection string 'TimescaleDb'"));
 
-builder.Services.AddDbContext<SiemDbContext>(options =>
+builder.Services.AddDbContextFactory<SiemDbContext>(options =>
     options.UseNpgsql(configuration.GetConnectionString("TimescaleDb")));
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
@@ -32,12 +33,14 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 // Core services
 // ---------------------------------------------------------------------------
 builder.Services.AddSingleton<IListCacheService, ListCacheService>();
-builder.Services.AddScoped<RuleLoadingService>();
+builder.Services.AddSingleton<RuleLoadingService>();
 builder.Services.AddSingleton<Evaluator.IStateProvider, RedisStateProvider>();
 builder.Services.AddSingleton<ICompiledRulesCache, CompiledRulesCache>();
-var recompilationConfig = configuration.GetSection("Recompilation").Get<RecompilationConfig>()
-    ?? new RecompilationConfig();
-builder.Services.AddSingleton(recompilationConfig);
+builder.Services.AddOptions<RecompilationConfig>()
+    .Bind(configuration.GetSection("Recompilation"))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<RecompilationConfig>>().Value);
 builder.Services.AddSingleton<ICompilationNotifier, CompilationNotifier>();
 builder.Services.AddSingleton<IRuleCompilationOrchestrator, RuleCompilationOrchestrator>();
 builder.Services.AddSingleton<RecompilationCoordinator>();
@@ -46,9 +49,11 @@ builder.Services.AddSingleton<IRecompilationCoordinator>(sp =>
 builder.Services.AddHostedService(sp =>
     sp.GetRequiredService<RecompilationCoordinator>());
 
-var paginationConfig = configuration.GetSection("Pagination").Get<PaginationConfig>()
-    ?? new PaginationConfig();
-builder.Services.AddSingleton(paginationConfig);
+builder.Services.AddOptions<PaginationConfig>()
+    .Bind(configuration.GetSection("Pagination"))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<PaginationConfig>>().Value);
 
 // ---------------------------------------------------------------------------
 // API services (controller backing)

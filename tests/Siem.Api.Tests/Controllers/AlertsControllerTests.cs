@@ -245,4 +245,60 @@ public class AlertsControllerTests : IDisposable
         var result = await _controller.ResolveAlert(Guid.NewGuid(), request, CancellationToken.None);
         result.Should().BeOfType<NotFoundResult>();
     }
+
+    // --- Pagination boundaries ---
+
+    [Test]
+    [Arguments(0, 10, 1, 10)]       // page floors to 1
+    [Arguments(-5, 10, 1, 10)]      // negative page floors to 1
+    [Arguments(1, 0, 1, 1)]         // pageSize floors to 1
+    [Arguments(1, -1, 1, 1)]        // negative pageSize floors to 1
+    [Arguments(1, 999, 1, 200)]     // pageSize caps at AlertsMaxPageSize (200)
+    public async Task ListAlerts_PaginationBoundaries_ClampsValues(
+        int inputPage, int inputPageSize, int expectedPage, int expectedPageSize)
+    {
+        _db.Alerts.Add(TestEntityBuilders.CreateAlert());
+        await _db.SaveChangesAsync();
+
+        var result = await _controller.ListAlerts(
+            null, null, null, page: inputPage, pageSize: inputPageSize, ct: CancellationToken.None);
+
+        var paginated = ExtractPaginatedResult(result);
+        paginated.Page.Should().Be(expectedPage);
+        paginated.PageSize.Should().Be(expectedPageSize);
+    }
+
+    // --- Cancellation ---
+
+    [Test]
+    public async Task ListAlerts_CancelledToken_ThrowsOperationCancelled()
+    {
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var act = () => _controller.ListAlerts(null, null, null, ct: cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    // --- Concurrent modification ---
+
+    [Test]
+    public async Task AcknowledgeAndResolve_SameAlert_Concurrently_BothComplete()
+    {
+        var alert = TestEntityBuilders.CreateAlert(status: AlertStatus.Open);
+        _db.Alerts.Add(alert);
+        await _db.SaveChangesAsync();
+
+        var request = new ResolveAlertRequest { ResolutionNote = "concurrent" };
+        var ackTask = _controller.AcknowledgeAlert(alert.AlertId, CancellationToken.None);
+        var resolveTask = _controller.ResolveAlert(alert.AlertId, request, CancellationToken.None);
+
+        var results = await Task.WhenAll(ackTask, resolveTask);
+
+        // At least one should succeed (OkObjectResult), the other may also succeed
+        // depending on execution order. Neither should throw.
+        results.Should().AllSatisfy(r =>
+            r.Should().Match<IActionResult>(x =>
+                x is OkObjectResult || x is BadRequestObjectResult || x is NotFoundResult));
+    }
 }

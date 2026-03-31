@@ -1,7 +1,5 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.FSharp.Collections;
 using NSubstitute;
@@ -11,12 +9,11 @@ using Siem.Rules.Core;
 
 namespace Siem.Api.Tests.Services;
 
-public class RuleCompilationOrchestratorTests : IDisposable
+public class RuleCompilationOrchestratorTests
 {
     private readonly IListCacheService _listCache;
     private readonly ICompiledRulesCache _rulesCache;
     private readonly ICompilationNotifier _notifier;
-    private readonly ServiceProvider _provider;
     private readonly RuleCompilationOrchestrator _orchestrator;
 
     public RuleCompilationOrchestratorTests()
@@ -28,23 +25,27 @@ public class RuleCompilationOrchestratorTests : IDisposable
         _rulesCache = Substitute.For<ICompiledRulesCache>();
         _notifier = Substitute.For<ICompilationNotifier>();
 
-        var services = new ServiceCollection();
         var dbName = $"OrchestratorTest-{Guid.NewGuid():N}";
-        services.AddDbContext<SiemDbContext>(options =>
-            options.UseInMemoryDatabase(dbName));
-        services.AddScoped<RuleLoadingService>();
-        services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
-        services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-        _provider = services.BuildServiceProvider();
+        var dbFactory = new InMemoryDbContextFactory(dbName);
+        var ruleLoader = new RuleLoadingService(dbFactory, NullLogger<RuleLoadingService>.Instance);
 
         _orchestrator = new RuleCompilationOrchestrator(
             _listCache, _rulesCache,
-            _provider.GetRequiredService<IServiceScopeFactory>(),
+            ruleLoader,
             _notifier,
             NullLogger<RuleCompilationOrchestrator>.Instance);
     }
 
-    public void Dispose() => _provider.Dispose();
+    private class InMemoryDbContextFactory(string dbName) : IDbContextFactory<SiemDbContext>
+    {
+        public SiemDbContext CreateDbContext()
+        {
+            var options = new DbContextOptionsBuilder<SiemDbContext>()
+                .UseInMemoryDatabase(dbName)
+                .Options;
+            return new SiemDbContext(options);
+        }
+    }
 
     [Test]
     public async Task CompileAsync_RefreshesListCache()

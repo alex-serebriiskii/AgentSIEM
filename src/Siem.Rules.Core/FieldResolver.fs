@@ -21,7 +21,7 @@ module FieldResolver =
         | dotted ->
             let key =
                 if dotted.StartsWith("properties.") then
-                    dotted.Substring(11)
+                    dotted.Substring("properties.".Length)
                 else
                     dotted
             evt.Properties

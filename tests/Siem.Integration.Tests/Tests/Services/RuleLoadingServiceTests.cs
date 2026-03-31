@@ -1,9 +1,12 @@
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.FSharp.Collections;
 using Microsoft.FSharp.Control;
 using Microsoft.FSharp.Core;
 using NSubstitute;
+using Siem.Api.Data;
 using Siem.Api.Services;
 using Siem.Integration.Tests.Fixtures;
 using Siem.Integration.Tests.Helpers;
@@ -20,6 +23,17 @@ public class RuleLoadingServiceTests
         await DbHelper.TruncateAllTablesAsync();
     }
 
+    private static RuleLoadingService CreateService()
+    {
+        var dbFactory = new IntegrationDbContextFactory();
+        return new RuleLoadingService(dbFactory, NullLogger<RuleLoadingService>.Instance);
+    }
+
+    private class IntegrationDbContextFactory : IDbContextFactory<SiemDbContext>
+    {
+        public SiemDbContext CreateDbContext() => IntegrationTestFixture.CreateDbContext();
+    }
+
     [Test]
     public async Task LoadEnabledRules_ReturnsParsedFSharpTypes()
     {
@@ -30,9 +44,7 @@ public class RuleLoadingServiceTests
             await db.SaveChangesAsync();
         }
 
-        await using var db2 = IntegrationTestFixture.CreateDbContext();
-        var service = new RuleLoadingService(
-            db2, NullLogger<RuleLoadingService>.Instance);
+        var service = CreateService();
 
         var rules = await service.LoadEnabledRulesAsync();
 
@@ -56,9 +68,7 @@ public class RuleLoadingServiceTests
             await db.SaveChangesAsync();
         }
 
-        await using var db2 = IntegrationTestFixture.CreateDbContext();
-        var service = new RuleLoadingService(
-            db2, NullLogger<RuleLoadingService>.Instance);
+        var service = CreateService();
 
         var rules = await service.LoadEnabledRulesAsync();
         rules.Should().HaveCount(1);
@@ -75,9 +85,7 @@ public class RuleLoadingServiceTests
             await db.SaveChangesAsync();
         }
 
-        await using var db2 = IntegrationTestFixture.CreateDbContext();
-        var service = new RuleLoadingService(
-            db2, NullLogger<RuleLoadingService>.Instance);
+        var service = CreateService();
 
         var rules = await service.LoadEnabledRulesAsync();
         rules.Should().HaveCount(1);
@@ -96,9 +104,7 @@ public class RuleLoadingServiceTests
             await db.SaveChangesAsync();
         }
 
-        await using var db2 = IntegrationTestFixture.CreateDbContext();
-        var service = new RuleLoadingService(
-            db2, NullLogger<RuleLoadingService>.Instance);
+        var service = CreateService();
 
         var rules = await service.LoadEnabledRulesAsync();
         rules.Should().HaveCount(1);
@@ -126,9 +132,7 @@ public class RuleLoadingServiceTests
         // Context disposed — simulates application restart
 
         // Step 2: Load from a fresh context
-        await using var db2 = IntegrationTestFixture.CreateDbContext();
-        var service = new RuleLoadingService(
-            db2, NullLogger<RuleLoadingService>.Instance);
+        var service = CreateService();
         var rules = await service.LoadEnabledRulesAsync();
 
         rules.Should().HaveCount(1);

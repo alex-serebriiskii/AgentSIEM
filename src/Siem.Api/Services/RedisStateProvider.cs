@@ -1,5 +1,6 @@
 using Microsoft.FSharp.Control;
 using Microsoft.FSharp.Core;
+using Siem.Api.Shared;
 using StackExchange.Redis;
 using Siem.Rules.Core;
 
@@ -27,25 +28,8 @@ public class RedisStateProvider : Evaluator.IStateProvider
     private async Task<long> IncrementSlidingWindowCoreAsync(string key, TimeSpan window)
     {
         var db = _redis.GetDatabase();
-        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var windowStart = now - (long)window.TotalMilliseconds;
-
-        var transaction = db.CreateTransaction();
-
-        // Add current event with timestamp score
-        _ = transaction.SortedSetAddAsync(key, Guid.NewGuid().ToString(), now);
-
-        // Remove entries outside the window
-        _ = transaction.SortedSetRemoveRangeByScoreAsync(
-            key, double.NegativeInfinity, windowStart);
-
-        // Set TTL so keys auto-expire (double the window for safety)
-        _ = transaction.KeyExpireAsync(key, window + window);
-
-        await transaction.ExecuteAsync();
-
-        var count = await db.SortedSetLengthAsync(key);
-        return count;
+        return await RedisSlidingWindowHelper.IncrementAsync(
+            db, key, Guid.NewGuid().ToString(), window);
     }
 
     public FSharpAsync<int> GetSequenceProgressAsync(string key)
