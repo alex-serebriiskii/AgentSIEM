@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Siem.Api.Services;
 
 /// <summary>
@@ -6,12 +8,15 @@ namespace Siem.Api.Services;
 public class PaginationConfig
 {
     /// <summary>Maximum allowed page size for alert queries.</summary>
+    [Range(1, int.MaxValue)]
     public int AlertsMaxPageSize { get; set; } = 200;
 
     /// <summary>Maximum allowed page size for event search.</summary>
+    [Range(1, int.MaxValue)]
     public int EventsMaxPageSize { get; set; } = 500;
 
     /// <summary>Maximum event limit for session timeline.</summary>
+    [Range(1, int.MaxValue)]
     public int SessionTimelineMaxLimit { get; set; } = 5000;
 
     /// <summary>

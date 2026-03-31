@@ -12,12 +12,20 @@ public class ListService(SiemDbContext db, IRecompilationCoordinator coordinator
         CancellationToken ct)
     {
         var lists = await db.ManagedLists
-            .Include(l => l.Members)
             .OrderBy(l => l.Name)
+            .Select(l => new ManagedListSummaryResponse
+            {
+                Id = l.Id,
+                Name = l.Name,
+                Description = l.Description,
+                Enabled = l.Enabled,
+                MemberCount = l.Members.Count,
+                CreatedAt = l.CreatedAt,
+                UpdatedAt = l.UpdatedAt
+            })
             .ToListAsync(ct);
 
-        return ServiceResult<IReadOnlyList<ManagedListSummaryResponse>>.Success(
-            lists.Select(ManagedListSummaryResponse.FromEntity).ToList());
+        return ServiceResult<IReadOnlyList<ManagedListSummaryResponse>>.Success(lists);
     }
 
     public async Task<ServiceResult<ManagedListDetailResponse>> GetAsync(

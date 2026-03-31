@@ -1,6 +1,7 @@
 using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using Siem.Api.Data;
 
 namespace Siem.Api.Services;
 
@@ -135,11 +136,11 @@ public class ToolAnomalyDetector : BackgroundService
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
         {
-            var zScore = reader.IsDBNull(3) ? 0.0 : reader.GetDouble(3);
+            var zScore = reader.GetOrFallback("z_score", 0.0);
             anomalies.Add(new ToolAnomaly(
-                ToolName: reader.GetString(0),
-                TodayCount: reader.GetInt64(1),
-                AvgDailyCount: reader.GetDouble(2),
+                ToolName: reader.Get<string>("tool_name"),
+                TodayCount: reader.Get<long>("today_count"),
+                AvgDailyCount: reader.Get<double>("avg_daily_count"),
                 ZScore: zScore));
         }
 

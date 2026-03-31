@@ -1,4 +1,5 @@
 using Npgsql;
+using Siem.Api.Data;
 using Siem.Api.Data.Entities;
 using Siem.Api.Models.Responses;
 
@@ -39,21 +40,18 @@ public class AgentService(NpgsqlDataSource dataSource) : IAgentService
 
         var summary = new AgentRiskSummary
         {
-            AgentId = reader.GetString(reader.GetOrdinal("agent_id")),
-            AgentName = reader.GetString(reader.GetOrdinal("agent_name")),
-            TotalEvents = reader.GetInt64(reader.GetOrdinal("total_events")),
-            TotalSessions = reader.GetInt64(reader.GetOrdinal("total_sessions")),
-            OpenAlerts = reader.GetInt64(reader.GetOrdinal("open_alerts")),
-            CriticalAlerts = reader.GetInt64(reader.GetOrdinal("critical_alerts")),
-            UniqueTools = reader.GetInt64(reader.GetOrdinal("unique_tools")),
-            TotalTokens = reader.GetInt64(reader.GetOrdinal("total_tokens")),
-            AvgLatencyMs = reader.IsDBNull(reader.GetOrdinal("avg_latency_ms"))
-                ? 0.0 : reader.GetDouble(reader.GetOrdinal("avg_latency_ms")),
-            EventsPerMinute = reader.GetDouble(reader.GetOrdinal("events_per_minute")),
-            TopEventTypes = reader.IsDBNull(reader.GetOrdinal("top_event_types"))
-                ? "{}" : reader.GetString(reader.GetOrdinal("top_event_types")),
-            TopTools = reader.IsDBNull(reader.GetOrdinal("top_tools"))
-                ? "{}" : reader.GetString(reader.GetOrdinal("top_tools"))
+            AgentId = reader.Get<string>("agent_id"),
+            AgentName = reader.Get<string>("agent_name"),
+            TotalEvents = reader.Get<long>("total_events"),
+            TotalSessions = reader.Get<long>("total_sessions"),
+            OpenAlerts = reader.Get<long>("open_alerts"),
+            CriticalAlerts = reader.Get<long>("critical_alerts"),
+            UniqueTools = reader.Get<long>("unique_tools"),
+            TotalTokens = reader.Get<long>("total_tokens"),
+            AvgLatencyMs = reader.GetOrFallback("avg_latency_ms", 0.0),
+            EventsPerMinute = reader.Get<double>("events_per_minute"),
+            TopEventTypes = reader.GetOrFallback("top_event_types", "{}"),
+            TopTools = reader.GetOrFallback("top_tools", "{}")
         };
 
         return ServiceResult<AgentRiskSummaryResponse>.Success(

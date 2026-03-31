@@ -15,12 +15,12 @@ public class ListCacheService : IListCacheService
     private volatile IReadOnlyDictionary<Guid, FrozenListSnapshot> _cache
         = new Dictionary<Guid, FrozenListSnapshot>();
 
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IDbContextFactory<SiemDbContext> _dbFactory;
     private readonly ILogger<ListCacheService> _logger;
 
-    public ListCacheService(IServiceScopeFactory scopeFactory, ILogger<ListCacheService> logger)
+    public ListCacheService(IDbContextFactory<SiemDbContext> dbFactory, ILogger<ListCacheService> logger)
     {
-        _scopeFactory = scopeFactory;
+        _dbFactory = dbFactory;
         _logger = logger;
     }
 
@@ -47,8 +47,7 @@ public class ListCacheService : IListCacheService
     /// </summary>
     public async Task<long> RefreshAsync(CancellationToken ct = default)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<SiemDbContext>();
+        using var db = await _dbFactory.CreateDbContextAsync(ct);
 
         var lists = await db.ManagedLists
             .Include(l => l.Members)

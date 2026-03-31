@@ -22,11 +22,11 @@ public class ListCacheServiceTests
     private static ListCacheService CreateService()
     {
         var services = new ServiceCollection();
-        services.AddDbContext<SiemDbContext>(options =>
+        services.AddDbContextFactory<SiemDbContext>(options =>
             options.UseNpgsql(IntegrationTestFixture.TimescaleConnectionString));
         var provider = services.BuildServiceProvider();
-        var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
-        return new ListCacheService(scopeFactory, NullLogger<ListCacheService>.Instance);
+        var dbFactory = provider.GetRequiredService<IDbContextFactory<SiemDbContext>>();
+        return new ListCacheService(dbFactory, NullLogger<ListCacheService>.Instance);
     }
 
     [Test]

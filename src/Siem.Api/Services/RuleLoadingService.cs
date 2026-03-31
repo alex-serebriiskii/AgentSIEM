@@ -15,19 +15,20 @@ namespace Siem.Api.Services;
 /// </summary>
 public class RuleLoadingService
 {
-    private readonly SiemDbContext _db;
+    private readonly IDbContextFactory<SiemDbContext> _dbFactory;
     private readonly ILogger<RuleLoadingService> _logger;
 
-    public RuleLoadingService(SiemDbContext db, ILogger<RuleLoadingService> logger)
+    public RuleLoadingService(IDbContextFactory<SiemDbContext> dbFactory, ILogger<RuleLoadingService> logger)
     {
-        _db = db;
+        _dbFactory = dbFactory;
         _logger = logger;
     }
 
     public async Task<List<RuleDefinition>> LoadEnabledRulesAsync(
         CancellationToken ct = default)
     {
-        var dbRules = await _db.Rules
+        using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var dbRules = await db.Rules
             .Where(r => r.Enabled)
             .ToListAsync(ct);
 

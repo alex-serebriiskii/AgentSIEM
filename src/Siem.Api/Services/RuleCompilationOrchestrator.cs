@@ -9,20 +9,20 @@ public class RuleCompilationOrchestrator : IRuleCompilationOrchestrator
 {
     private readonly IListCacheService _listCache;
     private readonly ICompiledRulesCache _rulesCache;
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly RuleLoadingService _ruleLoader;
     private readonly ICompilationNotifier _notifier;
     private readonly ILogger<RuleCompilationOrchestrator> _logger;
 
     public RuleCompilationOrchestrator(
         IListCacheService listCache,
         ICompiledRulesCache rulesCache,
-        IServiceScopeFactory scopeFactory,
+        RuleLoadingService ruleLoader,
         ICompilationNotifier notifier,
         ILogger<RuleCompilationOrchestrator> logger)
     {
         _listCache = listCache;
         _rulesCache = rulesCache;
-        _scopeFactory = scopeFactory;
+        _ruleLoader = ruleLoader;
         _notifier = notifier;
         _logger = logger;
     }
@@ -39,13 +39,8 @@ public class RuleCompilationOrchestrator : IRuleCompilationOrchestrator
         // Step 1: Refresh list cache from DB
         var listVersion = await _listCache.RefreshAsync(ct);
 
-        // Step 2: Load all enabled rules from DB (scoped service)
-        List<RuleDefinition> rules;
-        using (var scope = _scopeFactory.CreateScope())
-        {
-            var ruleLoader = scope.ServiceProvider.GetRequiredService<RuleLoadingService>();
-            rules = await ruleLoader.LoadEnabledRulesAsync(ct);
-        }
+        // Step 2: Load all enabled rules from DB
+        var rules = await _ruleLoader.LoadEnabledRulesAsync(ct);
 
         // Step 3: Build the F# list resolver (bridges C# cache -> F# function)
         var listResolver = FuncConvert.FromFunc<Guid, FSharpSet<string>>(

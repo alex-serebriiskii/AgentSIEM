@@ -21,6 +21,7 @@ public class CompiledRulesCacheTests
     public void Engine_InitialState_HasZeroRules()
     {
         _cache.Engine.Should().NotBeNull();
+        _cache.Engine.CompiledRules.Length.Should().Be(0);
     }
 
     [Test]
@@ -72,6 +73,42 @@ public class CompiledRulesCacheTests
 
         _cache.Engine.Should().NotBeSameAs(firstEngine);
         _cache.LastCompilation.CompiledAt.Should().BeOnOrAfter(firstCompilation);
+    }
+
+    [Test]
+    public async Task ConcurrentReads_DuringSwap_AlwaysSeeConsistentSnapshot()
+    {
+        var listCache = Substitute.For<IListCacheService>();
+        var inconsistencies = 0;
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        // Readers continuously check that Engine and LastCompilation are consistent
+        var readers = Enumerable.Range(0, 4).Select(_ => Task.Run(() =>
+        {
+            while (!cts.Token.IsCancellationRequested)
+            {
+                var engine = _cache.Engine;
+                var metadata = _cache.LastCompilation;
+                // Both should reflect the same snapshot — rule count must match
+                if (engine.CompiledRules.Length != metadata.RuleCount)
+                    Interlocked.Increment(ref inconsistencies);
+            }
+        })).ToArray();
+
+        // Writer swaps engines repeatedly
+        var writer = Task.Run(async () =>
+        {
+            while (!cts.Token.IsCancellationRequested)
+            {
+                var rules = ListModule.Empty<Compiler.CompiledRule>();
+                _cache.SwapEngine(rules, listCache);
+                await Task.Yield();
+            }
+        });
+
+        await Task.WhenAll(readers.Append(writer));
+
+        inconsistencies.Should().Be(0, "volatile snapshot swap should ensure readers always see consistent engine + metadata pairs");
     }
 
 }

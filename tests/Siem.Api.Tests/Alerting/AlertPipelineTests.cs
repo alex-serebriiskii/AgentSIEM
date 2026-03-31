@@ -1,5 +1,4 @@
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.FSharp.Collections;
 using Microsoft.FSharp.Core;
@@ -34,17 +33,14 @@ public class AlertPipelineTests
         _enricher = Substitute.For<AlertEnricher>(default(SiemDbContext)!, default(Microsoft.Extensions.Logging.ILogger<AlertEnricher>)!);
         _persistence = Substitute.For<AlertPersistence>(default(SiemDbContext)!, default(Microsoft.Extensions.Logging.ILogger<AlertPersistence>)!);
 
-        // Wire up IServiceScopeFactory to return our mocks
-        var serviceProvider = Substitute.For<IServiceProvider>();
-        serviceProvider.GetService(typeof(SuppressionChecker)).Returns(_suppression);
-        serviceProvider.GetService(typeof(AlertEnricher)).Returns(_enricher);
-        serviceProvider.GetService(typeof(AlertPersistence)).Returns(_persistence);
+        // Wire up IAlertProcessingScopeFactory to return our mocks
+        var processingScope = Substitute.For<IAlertProcessingScope>();
+        processingScope.Suppression.Returns(_suppression);
+        processingScope.Enricher.Returns(_enricher);
+        processingScope.Persistence.Returns(_persistence);
 
-        var scope = Substitute.For<IServiceScope>();
-        scope.ServiceProvider.Returns(serviceProvider);
-
-        var scopeFactory = Substitute.For<IServiceScopeFactory>();
-        scopeFactory.CreateScope().Returns(scope);
+        var scopeFactory = Substitute.For<IAlertProcessingScopeFactory>();
+        scopeFactory.CreateScope().Returns(processingScope);
 
         // Default: nothing is duplicate/throttled/suppressed
         _dedup.IsDuplicateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())

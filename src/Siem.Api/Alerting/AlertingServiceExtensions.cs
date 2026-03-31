@@ -54,7 +54,10 @@ public static class AlertingServiceExtensions
         // Notification router (singleton)
         services.AddSingleton<INotificationRouter, NotificationRouter>();
 
-        // Pipeline (singleton -- creates its own scopes via IServiceScopeFactory)
+        // Alert processing scope factory (bridges scoped services into singleton pipeline)
+        services.AddSingleton<IAlertProcessingScopeFactory, AlertProcessingScopeFactory>();
+
+        // Pipeline (singleton)
         services.AddSingleton<IAlertPipeline, AlertPipeline>();
 
         // Notification retry infrastructure
