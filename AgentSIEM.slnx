@@ -5,6 +5,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Siem.Api.Tests/Siem.Api.Tests.csproj" />
+    <Project Path="tests/Siem.LoadTests/Siem.LoadTests.csproj" />
     <Project Path="tests/Siem.Rules.Core.Tests/Siem.Rules.Core.Tests.csproj" />
     <Project Path="tests/Siem.Integration.Tests/Siem.Integration.Tests.csproj" />
   </Folder>
