@@ -73,13 +73,16 @@ jobs:
 
             # Check if the merged PR had a 'patch' label
             IS_PATCH="false"
-            PR_NUMBER=$(gh pr list --state merged --search "${{ github.sha }}" --json number --jq '.[0].number // empty')
-            if [ -n "$PR_NUMBER" ]; then
-              LABELS=$(gh pr view "$PR_NUMBER" --json labels --jq '[.labels[].name] | join(",")')
+            PR_JSON=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" --jq '.[0] // empty' 2>/dev/null || true)
+            if [ -n "$PR_JSON" ]; then
+              PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
+              LABELS=$(echo "$PR_JSON" | jq -r '[.labels[].name] | join(",")')
               echo "PR #${PR_NUMBER} labels: ${LABELS}"
               if echo "$LABELS" | grep -q "patch"; then
                 IS_PATCH="true"
               fi
+            else
+              echo "No associated PR found for commit ${{ github.sha }}"
             fi
 
             if [ "$IS_PATCH" = "true" ]; then
