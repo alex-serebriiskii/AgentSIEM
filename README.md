@@ -120,7 +120,17 @@ GitHub Actions runs on push/PR to `main`:
 1. Build the solution
 2. Run all unit tests
 3. Run integration tests (Testcontainers spins up TimescaleDB, Redis, Kafka)
-4. Build and push multi-arch Docker image to [GHCR](https://ghcr.io/alex-serebriiskii/agentsiem) (main branch only)
+4. Calculate next semantic version
+5. Build and push multi-arch Docker image to [GHCR](https://ghcr.io/alex-serebriiskii/agentsiem) (main branch only)
+6. Create a GitHub Release with auto-generated notes
+
+### Versioning
+
+Versions follow **semver** (`MAJOR.MINOR.PATCH`) and are auto-incremented on each merge to `main`:
+
+- **Minor bump** (default): `0.1.0` -> `0.2.0` -> `0.3.0`
+- **Patch bump**: Add the `patch` label to a PR before merging -> `0.3.0` -> `0.3.1`
+- **Major bump**: Edit the `VERSION` file in the repo root (e.g., change `0` to `1`), then merge -> next version becomes `v1.1.0`
 
 ## Project Structure
 
