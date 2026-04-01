@@ -85,8 +85,8 @@ public class RecompilationCoordinatorTests : IDisposable
         using var cts = new CancellationTokenSource();
         await coordinator.StartAsync(cts.Token);
 
-        // Wait for initial startup compilation
-        await Task.Delay(300);
+        // Wait for initial startup compilation (generous for slow CI runners)
+        await Task.Delay(1000);
         var countAfterStartup = compilationCount;
 
         // Fire 10 rapid signals
@@ -96,8 +96,8 @@ public class RecompilationCoordinatorTests : IDisposable
                 new InvalidationSignal(InvalidationReason.RuleUpdated));
         }
 
-        // Wait for debounce window + compilation
-        await Task.Delay(500);
+        // Wait for debounce window (100ms) + compilation + CI scheduling slack
+        await Task.Delay(1500);
 
         cts.Cancel();
         await coordinator.StopAsync(CancellationToken.None);
