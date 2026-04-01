@@ -1,0 +1,56 @@
+name: Load Tests
+
+on:
+  schedule:
+    # Every night at 03:00 UTC
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      throughput_factor:
+        description: "Throughput scaling factor (lower = more permissive)"
+        default: "0.5"
+      latency_factor:
+        description: "Latency scaling factor (higher = more permissive)"
+        default: "2.0"
+      perf_baseline:
+        description: "Enable production-target query tests"
+        type: boolean
+        default: false
+
+env:
+  DOTNET_VERSION: "10.0.x"
+
+jobs:
+  load-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      LOAD_TEST_THROUGHPUT_FACTOR: ${{ github.event.inputs.throughput_factor || '0.5' }}
+      LOAD_TEST_LATENCY_FACTOR: ${{ github.event.inputs.latency_factor || '2.0' }}
+      PERF_BASELINE_ENABLED: ${{ github.event.inputs.perf_baseline || 'false' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Build
+        run: dotnet build tests/Siem.LoadTests -c Release
+
+      - name: Run load tests
+        run: dotnet run --project tests/Siem.LoadTests/Siem.LoadTests.csproj -c Release --no-build
+
+      - name: Post summary
+        if: always()
+        run: |
+          echo "## Load Test Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Setting | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Throughput factor | ${LOAD_TEST_THROUGHPUT_FACTOR} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Latency factor | ${LOAD_TEST_LATENCY_FACTOR} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Production targets | ${PERF_BASELINE_ENABLED} |" >> "$GITHUB_STEP_SUMMARY"
