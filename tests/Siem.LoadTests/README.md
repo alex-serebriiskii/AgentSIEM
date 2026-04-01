@@ -14,7 +14,13 @@ dotnet run --project tests/Siem.LoadTests
 
 Tests start TimescaleDB, Redis, and Kafka containers automatically via Testcontainers.
 
-## CI Threshold Scaling
+## CI
+
+Load tests run nightly at 03:00 UTC via `.github/workflows/load-tests.yml` with relaxed thresholds (`THROUGHPUT_FACTOR=0.5`, `LATENCY_FACTOR=2.0`). They can also be triggered manually from the Actions tab with custom scaling factors and an option to enable production-target query tests.
+
+Load tests are **not** part of the PR gate — only unit and integration tests run on every push. This avoids flaky failures from non-deterministic throughput measurements on shared CI runners.
+
+## Threshold Scaling
 
 Set environment variables to adjust thresholds on weaker CI runners:
 
