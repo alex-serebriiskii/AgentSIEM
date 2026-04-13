@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+/*
+ * AgentSIEM Design Tokens
+ *
+ * Dark-mode-first theme following the UI requirements:
+ * - Monochrome base with color reserved for severity/state
+ * - Inter for UI text, JetBrains Mono for data/code
+ * - WCAG 2.1 AA contrast ratios against dark backgrounds
+ */
+
+@theme {
+  /* --- Typography --- */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Fira Code", monospace;
+
+  /* --- Surface colors (dark mode base) --- */
+  --color-surface-base: #121212;
+  --color-surface-raised: #1e1e1e;
+  --color-surface-overlay: #252525;
+  --color-surface-sunken: #0a0a0a;
+
+  /* --- Border colors --- */
+  --color-border-default: #2e2e2e;
+  --color-border-muted: #1f1f1f;
+  --color-border-emphasis: #404040;
+
+  /* --- Text colors --- */
+  --color-text-primary: #f0f0f0;
+  --color-text-secondary: #a0a0a0;
+  --color-text-muted: #6b7280;
+  --color-text-inverse: #121212;
+
+  /* --- Severity colors --- */
+  --color-severity-critical: #dc2626;
+  --color-severity-high: #ea580c;
+  --color-severity-medium: #d97706;
+  --color-severity-low: #3b82f6;
+
+  /* --- State colors --- */
+  --color-state-healthy: #0d9488;
+  --color-state-inactive: #6b7280;
+
+  /* --- Severity backgrounds (low opacity fills for badges) --- */
+  --color-severity-critical-bg: color-mix(in srgb, #dc2626 15%, transparent);
+  --color-severity-high-bg: color-mix(in srgb, #ea580c 15%, transparent);
+  --color-severity-medium-bg: color-mix(in srgb, #d97706 15%, transparent);
+  --color-severity-low-bg: color-mix(in srgb, #3b82f6 15%, transparent);
+  --color-state-healthy-bg: color-mix(in srgb, #0d9488 15%, transparent);
+
+  /* --- Interactive --- */
+  --color-interactive-default: #3b82f6;
+  --color-interactive-hover: #60a5fa;
+  --color-interactive-active: #2563eb;
+
+  /* --- Focus ring --- */
+  --color-focus-ring: #60a5fa;
+}
+
+/*
+ * Light mode overrides.
+ * Applied via class="light" on <html> or via OS preference.
+ */
+@media (prefers-color-scheme: light) {
+  :root:not(.dark) {
+    --color-surface-base: #f8f9fa;
+    --color-surface-raised: #ffffff;
+    --color-surface-overlay: #f0f1f3;
+    --color-surface-sunken: #e9ecef;
+
+    --color-border-default: #d1d5db;
+    --color-border-muted: #e5e7eb;
+    --color-border-emphasis: #9ca3af;
+
+    --color-text-primary: #111827;
+    --color-text-secondary: #4b5563;
+    --color-text-muted: #9ca3af;
+    --color-text-inverse: #f0f0f0;
+
+    --color-severity-critical-bg: color-mix(in srgb, #dc2626 12%, transparent);
+    --color-severity-high-bg: color-mix(in srgb, #ea580c 12%, transparent);
+    --color-severity-medium-bg: color-mix(in srgb, #d97706 12%, transparent);
+    --color-severity-low-bg: color-mix(in srgb, #3b82f6 12%, transparent);
+    --color-state-healthy-bg: color-mix(in srgb, #0d9488 12%, transparent);
+  }
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+/*
+ * Focus ring utility — visible, high-contrast, consistent.
+ * Replaces default browser outline on dark backgrounds.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
