@@ -7,6 +7,8 @@ obj/
 .vs/
 reference_materials/
 tests/
+**/node_modules/
+**/dist/
 *.md
 *.docx
 *.svg

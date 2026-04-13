@@ -110,6 +110,20 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
 builder.Services.AddHttpClient();
 
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddCors(options =>
+    {
+        options.AddDefaultPolicy(policy =>
+        {
+            policy.WithOrigins("http://localhost:3000")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials(); // Required for SignalR
+        });
+    });
+}
+
 // ---------------------------------------------------------------------------
 // Build & configure middleware
 // ---------------------------------------------------------------------------
@@ -127,12 +141,28 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseCors();
 }
 
 app.UseHttpMetrics(); // Track HTTP request duration/count per endpoint
+
+// Serve the SolidJS SPA from wwwroot in production.
+// In development the Vite dev server (localhost:3000) proxies API requests here.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
+
 app.MapControllers();
 app.MapHub<AlertHub>("/hubs/alerts");
 app.MapHealthChecks("/health");
 app.MapMetrics(); // Prometheus scraping endpoint at /metrics
+
+// SPA fallback — route all non-API/non-file requests to index.html
+if (!app.Environment.IsDevelopment())
+{
+    app.MapFallbackToFile("index.html");
+}
 
 app.Run();

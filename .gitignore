@@ -441,3 +441,16 @@ docker-compose.override.yml
 
 # TUnit test results
 **/TestResults/
+
+# UI build output
+src/Siem.UI/dist/
+src/Siem.Api/wwwroot/
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Plan docs
+Phase*Plan.md
+
+# Review docs
+*Review.md
