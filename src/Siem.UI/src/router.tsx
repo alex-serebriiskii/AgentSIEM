@@ -3,12 +3,13 @@ import { Suspense } from "solid-js";
 import AppLayout from "./layouts/AppLayout";
 import Placeholder from "./pages/Placeholder";
 import NotFound from "./pages/NotFound";
+import DashboardView from "./views/dashboard/DashboardView";
 
 export default function AppRouter() {
   return (
     <Router root={AppLayout}>
       <Suspense>
-        <Route path="/" component={Placeholder} />
+        <Route path="/" component={DashboardView} />
         <Route path="/alerts" component={Placeholder} />
         <Route path="/alerts/:id" component={Placeholder} />
         <Route path="/investigate" component={Placeholder} />
